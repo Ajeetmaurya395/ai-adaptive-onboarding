@@ -1,0 +1,10 @@
+{
+  "resume1": {
+    "skills": ["Python", "SQL", "Data Analysis"],
+    "experience_years": 2
+  },
+  "jd1": {
+    "skills": ["Python", "SQL", "AWS", "Machine Learning"],
+    "role": "Data Engineer"
+  }
+}

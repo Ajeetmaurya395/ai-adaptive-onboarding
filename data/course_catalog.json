@@ -1,0 +1,9 @@
+{
+  "courses": [
+    {"id": "c1", "title": "Advanced Python for Data Science", "skill": "Python", "duration": "4 weeks", "url": "#"},
+    {"id": "c2", "title": "AWS Solutions Architect", "skill": "AWS", "duration": "6 weeks", "url": "#"},
+    {"id": "c3", "title": "Effective Communication", "skill": "Communication", "duration": "2 weeks", "url": "#"},
+    {"id": "c4", "title": "React.js Fundamentals", "skill": "React", "duration": "5 weeks", "url": "#"},
+    {"id": "c5", "title": "SQL for Beginners", "skill": "SQL", "duration": "3 weeks", "url": "#"}
+  ]
+}
