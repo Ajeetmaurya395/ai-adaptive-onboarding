@@ -181,10 +181,11 @@ div[data-testid="stFileUploaderDropzone"] [data-testid="stBaseButton-secondary"]
 .stTabs [data-baseweb="tab-list"] {
   gap: 0.9rem !important;
   padding-bottom: 0.25rem !important;
+  align-items: stretch !important;
 }
 
 .stTabs [data-baseweb="tab"] {
-  min-width: 0 !important;
+  min-width: 180px !important;
   min-height: 58px !important;
   padding: 0.9rem 1.6rem !important;
   border-radius: 18px !important;
@@ -193,17 +194,49 @@ div[data-testid="stFileUploaderDropzone"] [data-testid="stBaseButton-secondary"]
   color: var(--text-main) !important;
   font-weight: 700 !important;
   box-shadow: none !important;
+  justify-content: center !important;
 }
 
 .stTabs [data-baseweb="tab"] p {
   margin: 0 !important;
   line-height: 1.1 !important;
+  text-align: center !important;
 }
 
 .stTabs [aria-selected="true"] {
   background: linear-gradient(180deg, #d9f4ff, #c8eeff) !important;
-  border-color: var(--border-strong) !important;
-  box-shadow: 0 10px 20px rgba(14, 165, 198, 0.14) !important;
+  border: 2px solid #38bdf8 !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16), 0 10px 20px rgba(14, 165, 198, 0.14) !important;
+}
+
+.stTabs [data-baseweb="tab-highlight"] {
+  background: transparent !important;
+  height: 0 !important;
+}
+
+.metric-card {
+  min-height: 150px;
+  border-radius: 22px;
+  padding: 1.15rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  box-shadow: var(--shadow-soft);
+}
+
+.metric-label {
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  margin-bottom: 0.7rem;
+}
+
+.metric-value {
+  font-size: 3rem;
+  line-height: 1;
+  color: var(--text-main);
+  letter-spacing: -0.03em;
 }
 
 [data-testid="stDataFrame"] {

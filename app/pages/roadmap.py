@@ -9,6 +9,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.assets.theme import inject_css
+from app.components.cards import render_metric_card
 from app.components.charts import render_roadmap_priority_chart, render_roadmap_duration_chart
 from app.components.layout import render_page_header, render_footer, render_section_intro
 from app.components.navbar import render_sidebar
@@ -76,9 +77,12 @@ render_section_intro(
 )
 
 col1, col2, col3 = st.columns(3, gap="large")
-col1.metric("Roadmap Steps", len(roadmap))
-col2.metric("High Priority", sum(1 for step in roadmap if step.get("priority") == "High"))
-col3.metric("Mode", "Sample" if using_sample else "Live")
+with col1:
+    render_metric_card("Roadmap Steps", len(roadmap), "🗺️")
+with col2:
+    render_metric_card("High Priority", sum(1 for step in roadmap if step.get("priority") == "High"), "🔥")
+with col3:
+    render_metric_card("Mode", "Sample" if using_sample else "Live", "⚙️")
 
 tab1, tab2, tab3 = st.tabs(["Timeline", "Charts", "Table"])
 with tab1:
