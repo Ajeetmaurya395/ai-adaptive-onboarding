@@ -1,168 +1,148 @@
-import streamlit as st
+import sys
 import time
-from app.assets.theme import inject_css
-from app.components.navbar import render_sidebar
-from app.database import init_db, create_user, verify_user, get_history, get_user_stats
-from app.auth import login, register
-from app.utils import reset_session
+from pathlib import Path
 
-# Initialize database connection
-init_db()
-inject_css()
+import streamlit as st
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+from app.assets.theme import inject_css
+from app.components.layout import render_page_header, render_footer, render_section_intro
+from app.components.navbar import render_sidebar
+from app.database import init_db, get_history, get_user_stats
 
 st.set_page_config(
-    page_title="AI Adaptive Onboarding", 
-    layout="wide", 
-    page_icon="🚀",
-    initial_sidebar_state="expanded"
+    page_title="AI Adaptive Onboarding",
+    layout="wide",
+    page_icon="✨",
+    initial_sidebar_state="expanded",
 )
 
-render_sidebar()
+db_init_error = None
+try:
+    init_db()
+except Exception as exc:
+    db_init_error = exc
 
-# Auth Logic
-if not st.session_state.get("logged_in"):
-    st.title("🔐 Welcome to AI Adaptive Onboarding")
-    st.markdown("""
-    ### Intelligent Career Development Platform
-    
-    ✨ **Features:**
-    - 🧠 AI-powered resume & JD analysis
-    - 📊 Skill gap visualization
-    - 🗺️ Personalized learning roadmaps
-    - 🔍 Explainable recommendations
-    
-    *Powered by Qwen2.5-7B-Instruct & MongoDB*
-    """)
-    
-    tab1, tab2 = st.tabs(["🔑 Login", "📝 Register"])
-    
-    with tab1:
-        with st.form("login_form"):
-            identifier = st.text_input("Username or Email", placeholder="Enter username or email")
-            password = st.text_input("Password", type="password", placeholder="Enter password")
-            submit = st.form_submit_button("Login", use_container_width=True)
-            
-            if submit:
-                if not identifier or not password:
-                    st.error("Please fill in all fields")
-                else:
-                    with st.spinner("Authenticating..."):
-                        success, result = login(identifier, password)
-                        if success:
-                            st.session_state.logged_in = True
-                            st.session_state.user_id = result["id"]
-                            st.session_state.username = result["username"]
-                            st.session_state.user_email = result["email"]
-                            st.success(f"Welcome back, {result['username']}! 🎉")
-                            time.sleep(1)
-                            st.rerun()
-                        else:
-                            st.error("Invalid credentials. Please try again.")
-    
-    with tab2:
-        with st.form("register_form"):
-            col1, col2 = st.columns(2)
-            with col1:
-                new_user = st.text_input("Username", placeholder="3-20 alphanumeric chars")
-                new_email = st.text_input("Email", placeholder="you@example.com")
-            with col2:
-                new_pass = st.text_input("Password", type="password", placeholder="Min 6 chars, letter + number")
-                confirm_pass = st.text_input("Confirm Password", type="password")
-            
-            terms = st.checkbox("I agree to the Terms of Service and Privacy Policy")
-            submit = st.form_submit_button("Create Account", use_container_width=True)
-            
-            if submit:
-                if not all([new_user, new_email, new_pass, confirm_pass]):
-                    st.error("Please fill in all fields")
-                elif new_pass != confirm_pass:
-                    st.error("Passwords do not match")
-                elif not terms:
-                    st.error("Please agree to the terms to continue")
-                else:
-                    with st.spinner("Creating account..."):
-                        success, msg = register(new_user, new_email, new_pass)
-                        if success:
-                            st.success(msg)
-                            st.info("You can now login with your credentials!")
-                        else:
-                            st.error(msg)
-    
-    # Demo access
-    st.markdown("---")
-    st.markdown("##### 🎮 Quick Demo")
-    if st.button("Try Demo Account", use_container_width=True, type="secondary"):
+inject_css()
+render_sidebar()
+if db_init_error:
+    st.warning("Database is unavailable. You can still explore demo mode.")
+
+
+def _render_logged_out() -> None:
+    render_page_header(
+        "Build Job-Ready Roadmaps",
+        "Upload resume + JD, detect skill gaps, and generate a structured learning plan.",
+        eyebrow="Welcome",
+    )
+
+    render_section_intro(
+        "What You Get",
+        "The platform combines skill extraction, matching, and guided upskilling in one place.",
+        pills=["Resume + JD Parsing", "Gap Analysis", "Roadmap + Charts", "Reasoning Trace"],
+    )
+    st.write("")
+
+    render_section_intro(
+        "Account Access",
+        "Use dedicated pages for login and registration from the sidebar or quick actions below.",
+        pills=["Secure Login", "Create Account", "Demo Mode"],
+    )
+
+    col1, col2 = st.columns(2, gap="large")
+    with col1:
+        if st.button("Go To Login Page", use_container_width=True):
+            st.switch_page("pages/login.py")
+    with col2:
+        if st.button("Go To Register Page", use_container_width=True):
+            st.switch_page("pages/register.py")
+
+    st.write("")
+    if st.button("Try Demo Account", type="primary", use_container_width=True):
         st.session_state.logged_in = True
         st.session_state.user_id = "demo_user"
         st.session_state.username = "demo"
-        st.success("🎉 Demo mode activated! Explore the platform.")
-        time.sleep(1)
+        st.session_state.user_email = "demo@example.com"
+        st.success("Demo mode activated.")
+        time.sleep(0.4)
         st.rerun()
 
-else:
-    # Logged in view
-    st.title(f"👋 Welcome, {st.session_state.username}!")
-    
-    # User stats dashboard
-    if st.session_state.user_id != "demo_user":
-        with st.spinner("Loading your stats..."):
-            stats = get_user_stats(st.session_state.user_id)
-        
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("📈 Analyses", stats.get("total_analyses", 0))
-        with col2:
-            st.metric("🎯 Avg Score", f"{stats.get('avg_score', 0):.1f}%")
-        with col3:
-            st.metric("⭐ Best Score", f"{stats.get('best_score', 0):.1f}%")
-        with col4:
-            last = stats.get("last_analysis")
-            if last:
-                st.metric("🕐 Last Analysis", last.strftime("%b %d"))
-            else:
-                st.metric("🕐 Last Analysis", "Never")
-    
-    st.markdown("---")
-    
-    # Quick actions
-    st.subheader("🚀 Quick Actions")
-    col1, col2, col3 = st.columns(3)
-    
+    render_footer()
+
+
+def _render_logged_in() -> None:
+    username = st.session_state.get("username", "there")
+    render_page_header(
+        f"Welcome, {username}",
+        "Start a new analysis or review your progress from recent runs.",
+        eyebrow="Dashboard",
+    )
+
+    if st.session_state.get("user_id") != "demo_user":
+        with st.spinner("Loading stats..."):
+            stats = get_user_stats(st.session_state["user_id"])
+
+        render_section_intro(
+            "Performance Snapshot",
+            "Live metrics based on your recent analyses.",
+            pills=["Progress Tracking", "Best Score", "Recent Activity"],
+        )
+        col1, col2, col3, col4 = st.columns(4, gap="large")
+        col1.metric("Analyses", stats.get("total_analyses", 0))
+        col2.metric("Average Score", f"{stats.get('avg_score', 0):.1f}%")
+        col3.metric("Best Score", f"{stats.get('best_score', 0):.1f}%")
+        last = stats.get("last_analysis")
+        col4.metric("Last Analysis", last.strftime("%b %d") if last else "Never")
+
+    st.write("")
+    render_section_intro(
+        "Quick Actions",
+        "Jump directly to the core workflows.",
+        pills=["Upload", "Analyze", "Roadmap", "History"],
+    )
+    col1, col2, col3 = st.columns(3, gap="large")
     with col1:
-        if st.button("📄 New Analysis", use_container_width=True, type="primary"):
+        if st.button("New Analysis", use_container_width=True, type="primary"):
             st.switch_page("pages/upload.py")
-    
     with col2:
-        if st.button("🗺️ View Roadmaps", use_container_width=True):
+        if st.button("Roadmaps", use_container_width=True):
             st.switch_page("pages/roadmap.py")
-    
     with col3:
-        if st.button("📜 History", use_container_width=True):
+        if st.button("History", use_container_width=True):
             st.switch_page("pages/history.py")
-    
-    # Recent activity
-    if st.session_state.user_id != "demo_user":
-        st.markdown("### 📋 Recent Activity")
-        history = get_history(st.session_state.user_id, days=7)
-        
+
+    if st.session_state.get("user_id") != "demo_user":
+        st.write("")
+        st.subheader("Recent Activity")
+        history = get_history(st.session_state["user_id"], days=7)
+
         if history:
             for item in history[:5]:
-                with st.expander(f"📊 Analysis - {item['score']}% match ({item['created_at'].strftime('%b %d, %H:%M')})"):
+                created = item.get("created_at")
+                created_label = created.strftime("%b %d, %H:%M") if created else "n/a"
+                with st.expander(f"Analysis • {item.get('score', 0)}% • {created_label}"):
                     gap = item.get("gap_summary", {})
-                    c1, c2, c3 = st.columns(3)
-                    c1.write(f"✅ Matched: {gap.get('matched', 0)} skills")
-                    c2.write(f"⚠️ Missing: {gap.get('missing', 0)} skills")
-                    c3.write(f"🎯 Score: {item['score']}%")
+                    a, b, c = st.columns(3, gap="medium")
+                    a.write(f"Matched: {gap.get('matched', 0)}")
+                    b.write(f"Missing: {gap.get('missing', 0)}")
+                    c.write(f"Score: {item.get('score', 0)}%")
         else:
-            st.info("📭 No recent analyses. Start with a new analysis!")
-    
-    # Navigation helper
-    st.markdown("---")
-    st.markdown("""
-    <div style="text-align: center; color: var(--text-muted);">
-        <small>Navigate using the sidebar • 
-        <a href="/upload" style="color: var(--secondary);">Start Analysis</a> • 
-        <a href="/evaluation" style="color: var(--secondary);">System Metrics</a>
-        </small>
-    </div>
-    """, unsafe_allow_html=True)    
+            st.info("No recent analyses found. Start with a new upload.")
+
+    render_footer()
+
+
+if not st.session_state.get("logged_in"):
+    _render_logged_out()
+else:
+    _render_logged_in()

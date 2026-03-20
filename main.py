@@ -22,21 +22,35 @@ from datetime import datetime
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
+# Avoid UnicodeEncodeError on Windows terminals using legacy encodings.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
 from app.database import init_db, close_db, health_check, get_collection
 from services.llm_service import llm
 
 
 def check_dependencies():
     """Verify all required dependencies are installed"""
-    required = [
-        "streamlit", "pandas", "plotly", "pymongo", 
-        "bcrypt", "requests", "python-dotenv", "dnspython"
-    ]
+    required = {
+        "streamlit": "streamlit",
+        "pandas": "pandas",
+        "plotly": "plotly",
+        "pymongo": "pymongo",
+        "bcrypt": "bcrypt",
+        "requests": "requests",
+        "python-dotenv": "dotenv",
+        "dnspython": "dns",
+    }
     missing = []
     
-    for pkg in required:
+    for pkg, module_name in required.items():
         try:
-            __import__(pkg.replace("-", "_"))
+            __import__(module_name)
         except ImportError:
             missing.append(pkg)
     
@@ -60,7 +74,7 @@ def check_mongodb_connection():
         
         # Verify database access
         db = client[MONGODB_DB]
-        db.command("collStats", "users")  # Test collection access
+        db.list_collection_names()
         
         print(f"✅ MongoDB connected: {MONGODB_URI}")
         print(f"📦 Database: {MONGODB_DB}")
@@ -186,8 +200,11 @@ def run_streamlit():
         "app/ui.py",
         "--server.port=8501",
         "--server.address=0.0.0.0",
-        "--theme.base=dark",
-        "--theme.primaryColor=#4CAF50",
+        "--theme.base=light",
+        "--theme.primaryColor=#06b6d4",
+        "--theme.backgroundColor=#f5fcff",
+        "--theme.secondaryBackgroundColor=#ecfeff",
+        "--theme.textColor=#0f172a",
         "--server.enableCORS=false",
         "--server.enableXsrfProtection=false"
     ]

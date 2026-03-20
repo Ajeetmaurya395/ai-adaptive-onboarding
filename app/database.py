@@ -3,6 +3,7 @@ MongoDB Database Module for AI Adaptive Learning Engine
 Handles all CRUD operations with PyMongo
 """
 import os
+import sys
 import bcrypt
 import json
 from datetime import datetime, timezone
@@ -13,14 +14,28 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Avoid UnicodeEncodeError on Windows terminals using legacy encodings.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
 # MongoDB Configuration
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
 MONGODB_DB = os.getenv("MONGODB_DB", "ai_onboarding")
+DB_VERBOSE = os.getenv("DB_VERBOSE", "0").strip().lower() in {"1", "true", "yes", "on"}
 
 # Global client and database references
 _client: Optional[MongoClient] = None
 _db: Optional[Any] = None
+_indexes_initialized: bool = False
 
+
+def _log(message: str) -> None:
+    if DB_VERBOSE:
+        print(message)
 
 def get_client() -> MongoClient:
     """Get or create MongoDB client with connection pooling"""
@@ -39,10 +54,10 @@ def get_client() -> MongoClient:
             )
             # Test connection
             _client.admin.command('ping')
-            print(f"✅ Connected to MongoDB: {MONGODB_URI}")
+            _log(f"Connected to MongoDB: {MONGODB_URI}")
         except errors.ConnectionFailure as e:
-            print(f"❌ MongoDB connection failed: {e}")
-            print("💡 Ensure MongoDB is running or check MONGODB_URI in .env")
+            print(f"MongoDB connection failed: {e}")
+            print("Ensure MongoDB is running or check MONGODB_URI in .env")
             raise
     return _client
 
@@ -60,35 +75,42 @@ def get_collection(name: str) -> Collection:
     return get_db()[name]
 
 
-def init_db():
-    """Initialize database with indexes and constraints"""
+def init_db(verbose: bool = False):
+    """Initialize database indexes once per process."""
+    global _indexes_initialized
+    if _indexes_initialized:
+        return
+
     db = get_db()
-    
+
     # Users collection indexes
     db.users.create_index("username", unique=True, name="idx_username_unique")
     db.users.create_index("email", unique=True, name="idx_email_unique")
     db.users.create_index("created_at", name="idx_users_created")
-    
+
     # Results collection indexes
     db.results.create_index("user_id", name="idx_results_user")
     db.results.create_index("created_at", name="idx_results_created")
     db.results.create_index([("user_id", 1), ("created_at", -1)], name="idx_user_history")
-    
+
     # Roadmaps collection indexes
     db.roadmaps.create_index("user_id", name="idx_roadmaps_user")
     db.roadmaps.create_index("created_at", name="idx_roadmaps_created")
-    
-    print("✅ Database indexes created")
+
+    _indexes_initialized = True
+    if verbose:
+        print("Database indexes created")
 
 
 def close_db():
     """Close MongoDB client connection"""
-    global _client, _db
+    global _client, _db, _indexes_initialized
     if _client:
         _client.close()
         _client = None
         _db = None
-        print("🔌 MongoDB connection closed")
+        _indexes_initialized = False
+        _log("MongoDB connection closed")
 
 
 # ============ USER OPERATIONS ============
@@ -134,7 +156,7 @@ def create_user(username: str, email: str, password: str) -> tuple[bool, str]:
     except errors.DuplicateKeyError:
         return False, "Username or email already exists"
     except Exception as e:
-        print(f"❌ Error creating user: {e}")
+        print(f"Error creating user: {e}")
         return False, f"Database error: {str(e)}"
 
 
@@ -181,7 +203,7 @@ def verify_user(identifier: str, password: str) -> tuple[bool, Optional[Dict]]:
         return False, None
         
     except Exception as e:
-        print(f"❌ Error verifying user: {e}")
+        print(f"Error verifying user: {e}")
         return False, None
 
 
@@ -197,7 +219,7 @@ def get_user_by_id(user_id: str) -> Optional[Dict]:
             return user
         return None
     except Exception as e:
-        print(f"❌ Error fetching user: {e}")
+        print(f"Error fetching user: {e}")
         return None
 
 
@@ -215,7 +237,7 @@ def update_user(user_id: str, updates: Dict) -> bool:
         )
         return result.modified_count > 0
     except Exception as e:
-        print(f"❌ Error updating user: {e}")
+        print(f"Error updating user: {e}")
         return False
 
 
@@ -244,7 +266,7 @@ def save_result(user_id: str, score: float, gap_data: Optional[Dict] = None,
         return True, str(result.inserted_id)
         
     except Exception as e:
-        print(f"❌ Error saving result: {e}")
+        print(f"Error saving result: {e}")
         return False, str(e)
 
 
@@ -266,7 +288,7 @@ def get_results(user_id: str, limit: int = 10, offset: int = 0) -> List[Dict]:
         return results_list
         
     except Exception as e:
-        print(f"❌ Error fetching results: {e}")
+        print(f"Error fetching results: {e}")
         return []
 
 
@@ -282,7 +304,7 @@ def get_result_by_id(result_id: str) -> Optional[Dict]:
             return doc
         return None
     except Exception as e:
-        print(f"❌ Error fetching result: {e}")
+        print(f"Error fetching result: {e}")
         return None
 
 
@@ -298,7 +320,7 @@ def delete_result(result_id: str, user_id: str) -> bool:
         })
         return result.deleted_count > 0
     except Exception as e:
-        print(f"❌ Error deleting result: {e}")
+        print(f"Error deleting result: {e}")
         return False
 
 
@@ -328,7 +350,7 @@ def save_roadmap(user_id: str, roadmap_data: Dict,
         return True, str(result.inserted_id)
         
     except Exception as e:
-        print(f"❌ Error saving roadmap: {e}")
+        print(f"Error saving roadmap: {e}")
         return False, str(e)
 
 
@@ -349,7 +371,7 @@ def get_roadmaps(user_id: str, limit: int = 5) -> List[Dict]:
         return roadmaps_list
         
     except Exception as e:
-        print(f"❌ Error fetching roadmaps: {e}")
+        print(f"Error fetching roadmaps: {e}")
         return []
 
 
@@ -365,7 +387,7 @@ def get_roadmap_by_id(roadmap_id: str) -> Optional[Dict]:
             return doc
         return None
     except Exception as e:
-        print(f"❌ Error fetching roadmap: {e}")
+        print(f"Error fetching roadmap: {e}")
         return None
 
 
@@ -384,7 +406,7 @@ def update_roadmap(roadmap_id: str, user_id: str, updates: Dict) -> bool:
         
         return result.modified_count > 0
     except Exception as e:
-        print(f"❌ Error updating roadmap: {e}")
+        print(f"Error updating roadmap: {e}")
         return False
 
 
@@ -436,7 +458,7 @@ def get_history(user_id: str, days: int = 30) -> List[Dict]:
         return history
         
     except Exception as e:
-        print(f"❌ Error fetching history: {e}")
+        print(f"Error fetching history: {e}")
         return []
 
 
@@ -475,7 +497,7 @@ def get_user_stats(user_id: str) -> Dict:
         }
         
     except Exception as e:
-        print(f"❌ Error fetching stats: {e}")
+        print(f"Error fetching stats: {e}")
         return {}
 
 
@@ -487,7 +509,7 @@ def count_collection(collection_name: str, query: Optional[Dict] = None) -> int:
         coll = get_collection(collection_name)
         return coll.count_documents(query or {})
     except Exception as e:
-        print(f"❌ Error counting {collection_name}: {e}")
+        print(f"Error counting {collection_name}: {e}")
         return 0
 
 
@@ -524,6 +546,7 @@ class DatabaseSession:
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type:
-            print(f"❌ Database error: {exc_val}")
+            print(f"Database error: {exc_val}")
         # Keep connection open for Streamlit session persistence
         return False
+

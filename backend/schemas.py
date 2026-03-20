@@ -1,7 +1,7 @@
 """
 Pydantic schemas for data validation and serialization
 """
-from pydantic import BaseModel, Field, validator, EmailStr
+from pydantic import BaseModel, Field, validator
 from typing import List, Optional, Dict, Union
 from datetime import datetime
 import re
@@ -12,8 +12,14 @@ import re
 class UserCreate(BaseModel):
     """Schema for user registration"""
     username: str = Field(..., min_length=3, max_length=20, pattern=r'^[a-zA-Z0-9]+$')
-    email: EmailStr
+    email: str = Field(..., min_length=5, max_length=254)
     password: str = Field(..., min_length=6)
+
+    @validator('email')
+    def email_format(cls, v):
+        if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', v):
+            raise ValueError('Invalid email format')
+        return v.lower()
     
     @validator('password')
     def password_strength(cls, v):

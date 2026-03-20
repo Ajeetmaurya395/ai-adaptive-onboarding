@@ -274,3 +274,18 @@ class GapEngine:
 
 # Singleton instance
 gap_engine = GapEngine()
+
+
+def calculate_gap(candidate_skills: List[str], required_skills: List[str], jd_text: str = "") -> Dict:
+    """
+    Backward-compatible wrapper used by Streamlit pages.
+    Returns a dict with simple list fields expected by the UI layer.
+    """
+    result = gap_engine.calculate_gap(candidate_skills, required_skills, jd_text)
+    return {
+        "match_score": result.match_score,
+        "matched_skills": [match.required_skill for match in result.matched_skills],
+        "missing_skills": [item.skill for item in result.missing_skills],
+        "extra_skills": result.extra_skills,
+        "total_required": result.total_required,
+    }
