@@ -83,7 +83,7 @@ col3.metric("Mode", "Sample" if using_sample else "Live")
 tab1, tab2, tab3 = st.tabs(["Timeline", "Charts", "Table"])
 with tab1:
     st.subheader("Learning Timeline")
-    render_timeline(roadmap)
+    render_timeline(roadmap, st.session_state.get("analysis_result"))
 
 with tab2:
     left, right = st.columns(2, gap="large")

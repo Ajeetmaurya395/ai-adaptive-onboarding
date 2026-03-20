@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import streamlit as st
 
 THEME = {
@@ -9,7 +11,14 @@ THEME = {
 }
 
 
+def load_css() -> None:
+    css_path = Path(__file__).with_name("styles.css")
+    if css_path.exists():
+        st.markdown(f"<style>{css_path.read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
+
+
 def inject_css() -> None:
+    load_css()
     st.markdown(
         """
         <style>

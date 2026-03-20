@@ -38,7 +38,7 @@ render_section_intro(
 
 col1, col2, col3 = st.columns(3, gap="large")
 with col1:
-    render_metric_card("Match Score", f"{gap['match_score']}%", "🎯")
+    render_metric_card("Match Score", f"{gap.get('match_score', 0)}%", "🎯")
 with col2:
     render_metric_card("Missing Skills", len(gap["missing_skills"]), "⚠️")
 with col3:
