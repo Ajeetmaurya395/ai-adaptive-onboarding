@@ -143,27 +143,11 @@ render_section_intro(
 )
 col1, col2 = st.columns(2, gap="large")
 with col1:
-    st.markdown('<div class="upload-panel">', unsafe_allow_html=True)
     st.subheader("Resume")
-    st.caption("Upload Resume (PDF/TXT)")
-    resume_file = st.file_uploader(
-        "Upload Resume (PDF/TXT)",
-        type=["pdf", "txt"],
-        key="resume_uploader",
-        label_visibility="collapsed",
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
+    resume_file = st.file_uploader("Upload Resume (PDF/TXT)", type=["pdf", "txt"], key="resume_uploader")
 with col2:
-    st.markdown('<div class="upload-panel">', unsafe_allow_html=True)
     st.subheader("Job Description")
-    st.caption("Upload JD (TXT)")
-    jd_file = st.file_uploader(
-        "Upload JD (TXT)",
-        type=["txt"],
-        key="jd_uploader",
-        label_visibility="collapsed",
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
+    jd_file = st.file_uploader("Upload JD (TXT)", type=["txt"], key="jd_uploader")
 
 st.write("")
 if st.button("Analyze Skill Gap", type="primary", use_container_width=True):
