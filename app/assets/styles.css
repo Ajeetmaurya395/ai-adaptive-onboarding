@@ -62,6 +62,12 @@ body {
   transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease !important;
 }
 
+.stButton > button *,
+.stButton > button p,
+.stButton > button span {
+  color: #ffffff !important;
+}
+
 .stButton > button:hover {
   transform: translateY(-1px) !important;
   filter: brightness(1.03);
@@ -79,6 +85,41 @@ div[data-testid="stFileUploaderDropzone"] {
 
 div[data-testid="stFileUploaderDropzone"] {
   padding: 18px !important;
+}
+
+div[data-testid="stFileUploader"] {
+  background: transparent !important;
+}
+
+div[data-testid="stFileUploader"] > section {
+  background: transparent !important;
+}
+
+div[data-testid="stFileUploaderDropzone"] > div,
+div[data-testid="stFileUploaderDropzone"] > div > div,
+div[data-testid="stFileUploaderDropzone"] [data-testid="stFileUploaderDropzoneInstructions"] {
+  background: transparent !important;
+}
+
+div[data-testid="stFileUploaderDropzone"] svg,
+div[data-testid="stFileUploaderDropzone"] p,
+div[data-testid="stFileUploaderDropzone"] small,
+div[data-testid="stFileUploaderDropzone"] span {
+  color: var(--text-main) !important;
+  fill: var(--accent-strong) !important;
+}
+
+div[data-testid="stFileUploaderDropzone"] button,
+div[data-testid="stFileUploaderDropzone"] [data-testid="stBaseButton-secondary"] {
+  background: #ffffff !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-soft) !important;
+  box-shadow: 0 8px 20px rgba(14, 116, 144, 0.12) !important;
+}
+
+div[data-testid="stFileUploaderDropzone"] button *,
+div[data-testid="stFileUploaderDropzone"] [data-testid="stBaseButton-secondary"] * {
+  color: var(--text-main) !important;
 }
 
 .streamlit-expanderHeader,
