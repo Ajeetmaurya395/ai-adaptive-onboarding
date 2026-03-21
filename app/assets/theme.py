@@ -194,12 +194,48 @@ def inject_css() -> None:
             border-right: 1px solid var(--line);
         }
 
+        section[data-testid="stSidebar"] {
+            min-width: 17.2rem !important;
+            max-width: 17.2rem !important;
+        }
+
+        section[data-testid="stSidebar"] > div {
+            min-width: 17.2rem !important;
+            max-width: 17.2rem !important;
+        }
+
+        section[data-testid="stSidebar"][aria-expanded="false"] {
+            min-width: 0 !important;
+            max-width: 0 !important;
+        }
+
         [data-testid="stSidebar"] .block-container {
-            padding-top: 1rem;
+            padding-top: 2.75rem;
+            padding-left: 0.9rem;
+            padding-right: 0.9rem;
         }
 
         [data-testid="stSidebarNav"] {
             display: none;
+        }
+
+        [data-testid="collapsedControl"] {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            z-index: 1002 !important;
+        }
+
+        [data-testid="collapsedControl"] button {
+            border-radius: 10px !important;
+            border: 1px solid #b6e6f8 !important;
+            background: rgba(255, 255, 255, 0.94) !important;
+            color: #0f172a !important;
+            box-shadow: var(--shadow-soft) !important;
+        }
+
+        [data-testid="collapsedControl"] svg {
+            fill: #0f172a !important;
         }
 
         .sidebar-brand {
@@ -644,12 +680,39 @@ def inject_css() -> None:
             border-right: 1px solid var(--line) !important;
         }}
 
+        [data-testid="stSidebar"] .block-container {{
+            padding-top: 2.75rem !important;
+            padding-left: 0.9rem !important;
+            padding-right: 0.9rem !important;
+        }}
+
         [data-testid="stSidebar"] *,
         [data-testid="stSidebar"] label,
         [data-testid="stSidebar"] span,
         [data-testid="stSidebar"] p,
         [data-testid="stSidebar"] a {{
             color: var(--ink) !important;
+        }}
+
+        [data-testid="stSidebar"] .stButton > button,
+        [data-testid="stSidebar"] .stButton > button *,
+        [data-testid="stSidebar"] .stButton > button p,
+        [data-testid="stSidebar"] .stButton > button span {{
+            background: {palette["card_soft"]} !important;
+            color: var(--ink) !important;
+            border-color: var(--line) !important;
+            box-shadow: var(--shadow-soft) !important;
+        }}
+
+        [data-testid="collapsedControl"] button {{
+            background: {palette["card_soft"]} !important;
+            border-color: var(--line) !important;
+            color: var(--ink) !important;
+            box-shadow: var(--shadow-soft) !important;
+        }}
+
+        [data-testid="collapsedControl"] svg {{
+            fill: var(--ink) !important;
         }}
 
         .sidebar-brand {{
@@ -728,6 +791,15 @@ def inject_css() -> None:
         .stTextInput > div > div > input::placeholder,
         .stTextArea textarea::placeholder {{
             color: var(--ink) !important;
+        }}
+
+        div[data-testid="stFileUploaderDropzone"] button,
+        div[data-testid="stFileUploaderDropzone"] [data-testid="stBaseButton-secondary"],
+        div[data-baseweb="input"]:has(input[type="password"]) button,
+        div[data-baseweb="base-input"]:has(input[type="password"]) button {{
+            background: {palette["card_soft"]} !important;
+            color: var(--ink) !important;
+            border-color: var(--line) !important;
         }}
 
         [data-testid="stInfo"] {{
