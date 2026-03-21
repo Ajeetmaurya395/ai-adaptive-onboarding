@@ -27,6 +27,23 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+def init_session_state():
+    """Initialize ALL required keys at startup to prevent KeyErrors."""
+    defaults = {
+        "analysis_result": None,
+        "reasoning_trace": "No trace available. Please run an analysis first.",
+        "skills": {"matched": [], "missing": []},
+        "db_available": False,
+        "logged_in": False,
+        "user_id": None,
+        "username": None
+    }
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
+init_session_state()
+
 load_css()
 
 db_init_error = None

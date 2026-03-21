@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  onboarding-app:
+    build: .
+    ports:
+      - "8502:8501"
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
+      - MODEL_NAME=${MODEL_NAME:-Qwen/Qwen2.5-7B-Instruct}
+      - MONGODB_URI=${MONGODB_URI:-mongodb://localhost:27017/onboarding}
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped

@@ -246,6 +246,67 @@ div[data-testid="stFileUploaderDropzone"] [data-testid="stBaseButton-secondary"]
   box-shadow: var(--shadow-soft);
 }
 
+.input-panel {
+  background:
+    radial-gradient(circle at top right, rgba(103, 232, 249, 0.2), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(242, 251, 255, 0.96));
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  padding: 1rem 1.05rem;
+  box-shadow: var(--shadow-soft);
+  margin-bottom: 0.85rem;
+}
+
+.input-panel__title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.input-panel__copy {
+  margin-top: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.94rem;
+  line-height: 1.5;
+}
+
+.readiness-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0.8rem 0 1rem;
+}
+
+.readiness-item {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 249, 255, 0.94));
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  padding: 1rem 1.05rem;
+  box-shadow: var(--shadow-soft);
+}
+
+.readiness-item__label {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.readiness-item__value {
+  color: var(--text-main);
+  font-size: 1.22rem;
+  font-weight: 800;
+  margin-top: 0.38rem;
+}
+
+.readiness-item__meta {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  margin-top: 0.28rem;
+  line-height: 1.45;
+}
+
 .roadmap-step {
   background:
     radial-gradient(circle at top right, rgba(125, 211, 252, 0.25), transparent 32%),
@@ -316,6 +377,10 @@ div[data-testid="stFileUploaderDropzone"] [data-testid="stBaseButton-secondary"]
 }
 
 @media (max-width: 768px) {
+  .readiness-strip {
+    grid-template-columns: 1fr;
+  }
+
   .roadmap-step {
     padding: 0.95rem 1rem;
   }

@@ -17,8 +17,76 @@ def load_css() -> None:
         st.markdown(f"<style>{css_path.read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
 
 
+def _surface_palette(mode: str) -> dict[str, str]:
+    if mode == "Dark":
+        return {
+            "bg_0": "#08131d",
+            "bg_1": "#0d1f2d",
+            "ink": "#e7f7ff",
+            "muted": "#b7d4df",
+            "line": "rgba(125, 211, 252, 0.24)",
+            "surface_bg": """
+                radial-gradient(circle at 8% 0%, rgba(34, 211, 238, 0.16), transparent 30%),
+                radial-gradient(circle at 100% 100%, rgba(8, 145, 178, 0.18), transparent 38%),
+                linear-gradient(180deg, #08131d 0%, #0b1a25 100%)
+            """,
+            "header_bg": "linear-gradient(180deg, rgba(9, 19, 29, 0.94), rgba(9, 21, 31, 0.84))",
+            "sidebar_bg": "linear-gradient(180deg, rgba(10, 20, 30, 0.96), rgba(9, 28, 40, 0.9))",
+            "brand_bg": "linear-gradient(140deg, rgba(14, 28, 40, 0.92), rgba(10, 56, 73, 0.76))",
+            "hero_bg": """
+                radial-gradient(circle at 92% 10%, rgba(34, 211, 238, 0.22), transparent 28%),
+                linear-gradient(120deg, rgba(14, 25, 37, 0.82), rgba(8, 44, 61, 0.72), rgba(7, 61, 78, 0.56))
+            """,
+            "card_bg": "linear-gradient(180deg, rgba(11, 23, 35, 0.74), rgba(13, 31, 45, 0.62))",
+            "card_soft": "linear-gradient(180deg, rgba(14, 28, 40, 0.78), rgba(13, 34, 49, 0.68))",
+            "card_strong": "linear-gradient(180deg, rgba(17, 52, 70, 0.86), rgba(15, 72, 94, 0.74))",
+            "footer_bg": "rgba(11, 23, 35, 0.74)",
+            "metric_ink": "#f0fbff",
+            "progress_track": "rgba(125, 211, 252, 0.16)",
+            "shadow": "0 24px 48px rgba(0, 0, 0, 0.28)",
+            "shadow_soft": "0 14px 30px rgba(0, 0, 0, 0.2)",
+            "info_bg": "linear-gradient(180deg, rgba(13, 38, 54, 0.88), rgba(11, 53, 72, 0.7))",
+            "success_bg": "linear-gradient(180deg, rgba(8, 52, 45, 0.9), rgba(12, 83, 67, 0.72))",
+            "warning_bg": "linear-gradient(180deg, rgba(61, 45, 9, 0.92), rgba(110, 79, 13, 0.72))",
+        }
+
+    return {
+        "bg_0": "#f5fcff",
+        "bg_1": "#ffffff",
+        "ink": "#0f172a",
+        "muted": "#475569",
+        "line": "#bae6fd",
+        "surface_bg": """
+            radial-gradient(circle at 6% 0%, rgba(6, 182, 212, 0.16), transparent 35%),
+            radial-gradient(circle at 100% 100%, rgba(14, 116, 144, 0.12), transparent 42%),
+            linear-gradient(180deg, #f9feff 0%, #f5fcff 100%)
+        """,
+        "header_bg": "linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(240, 251, 255, 0.9))",
+        "sidebar_bg": "linear-gradient(180deg, #ffffff 0%, #f0fbff 100%)",
+        "brand_bg": "linear-gradient(140deg, #ecfeff, #e0f2fe)",
+        "hero_bg": """
+            radial-gradient(circle at 90% 8%, rgba(34, 211, 238, 0.28), rgba(34, 211, 238, 0)),
+            linear-gradient(115deg, #ffffff 0%, #ecfbff 34%, #d7f3ff 100%)
+        """,
+        "card_bg": "linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(240, 251, 255, 0.84))",
+        "card_soft": "linear-gradient(180deg, rgba(244, 251, 255, 0.92), rgba(230, 247, 255, 0.82))",
+        "card_strong": "linear-gradient(180deg, rgba(217, 244, 255, 0.94), rgba(200, 238, 255, 0.9))",
+        "footer_bg": "rgba(255, 255, 255, 0.75)",
+        "metric_ink": "#082f49",
+        "progress_track": "rgba(186, 230, 253, 0.35)",
+        "shadow": "0 14px 35px rgba(8, 145, 178, 0.12)",
+        "shadow_soft": "0 8px 18px rgba(8, 145, 178, 0.08)",
+        "info_bg": "linear-gradient(180deg, rgba(236, 254, 255, 0.9), rgba(222, 247, 255, 0.78))",
+        "success_bg": "linear-gradient(180deg, rgba(236, 253, 245, 0.92), rgba(220, 252, 231, 0.82))",
+        "warning_bg": "linear-gradient(180deg, rgba(255, 251, 235, 0.94), rgba(254, 243, 199, 0.82))",
+    }
+
+
 def inject_css() -> None:
     load_css()
+    if "app_surface_mode" not in st.session_state:
+        st.session_state.app_surface_mode = "Light"
+    palette = _surface_palette(st.session_state.get("app_surface_mode", "Light"))
     st.markdown(
         """
         <style>
@@ -524,6 +592,172 @@ def inject_css() -> None:
                 padding-right: 1rem;
             }
         }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f"""
+        <style>
+        :root {{
+            --bg-0: {palette["bg_0"]};
+            --bg-1: {palette["bg_1"]};
+            --ink: {palette["ink"]};
+            --muted: {palette["muted"]};
+            --line: {palette["line"]};
+            --shadow: {palette["shadow"]};
+            --shadow-soft: {palette["shadow_soft"]};
+            --surface-bg: {palette["bg_0"]};
+            --surface-panel: rgba(255, 255, 255, 0.9);
+            --surface-card: {palette["bg_1"]};
+            --surface-soft: {palette["card_soft"]};
+            --border-soft: {palette["line"]};
+            --text-main: {palette["ink"]};
+            --text-muted: {palette["muted"]};
+        }}
+
+        .stApp {{
+            background: {palette["surface_bg"]} !important;
+            color: var(--ink) !important;
+        }}
+
+        [data-testid="stHeader"] {{
+            background: {palette["header_bg"]} !important;
+            border-bottom: 1px solid var(--line) !important;
+        }}
+
+        [data-testid="stSidebar"] {{
+            background: {palette["sidebar_bg"]} !important;
+            border-right: 1px solid var(--line) !important;
+        }}
+
+        [data-testid="stSidebar"] *,
+        [data-testid="stSidebar"] label,
+        [data-testid="stSidebar"] span,
+        [data-testid="stSidebar"] p,
+        [data-testid="stSidebar"] a {{
+            color: var(--ink) !important;
+        }}
+
+        .sidebar-brand {{
+            background: {palette["brand_bg"]} !important;
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }}
+
+        .app-header {{
+            background: {palette["hero_bg"]} !important;
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }}
+
+        .section-card,
+        .metric-card,
+        .timeline-step,
+        [data-testid="stMetric"],
+        [data-testid="stDataFrame"],
+        [data-testid="stForm"],
+        div[data-testid="stFileUploaderDropzone"],
+        div[data-baseweb="input"],
+        div[data-baseweb="base-input"],
+        .streamlit-expanderContent,
+        .app-footer,
+        .input-panel,
+        .upload-input-card,
+        .readiness-strip,
+        .theme-toggle-card {{
+            background: {palette["card_bg"]} !important;
+            border-color: var(--line) !important;
+            box-shadow: var(--shadow-soft) !important;
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }}
+
+        .streamlit-expanderHeader,
+        .stTabs [data-baseweb="tab"],
+        [data-testid="stSidebar"] [role="radiogroup"] label {{
+            background: {palette["card_soft"]} !important;
+            border-color: var(--line) !important;
+        }}
+
+        .stTabs [aria-selected="true"] {{
+            background: {palette["card_strong"]} !important;
+            border-color: #67e8f9 !important;
+            box-shadow: var(--shadow-soft) !important;
+        }}
+
+        .app-footer {{
+            background: {palette["footer_bg"]} !important;
+        }}
+
+        .stMetric [data-testid="stMetricValue"],
+        .metric-value,
+        .timeline-step-title,
+        .app-header-title,
+        .section-title {{
+            color: {palette["metric_ink"]} !important;
+        }}
+
+        .stMetric label,
+        [data-testid="stMetricLabel"] p,
+        .section-subtitle,
+        .timeline-meta,
+        .app-header-subtitle,
+        .theme-toggle-sub,
+        .sidebar-brand-sub {{
+            color: var(--muted) !important;
+        }}
+
+        .stTextInput input,
+        .stTextArea textarea,
+        .stSelectbox input,
+        .stTextInput > div > div > input::placeholder,
+        .stTextArea textarea::placeholder {{
+            color: var(--ink) !important;
+        }}
+
+        [data-testid="stInfo"] {{
+            background: {palette["info_bg"]} !important;
+            border: 1px solid var(--line) !important;
+        }}
+
+        [data-testid="stSuccess"] {{
+            background: {palette["success_bg"]} !important;
+            border: 1px solid var(--line) !important;
+        }}
+
+        [data-testid="stWarning"] {{
+            background: {palette["warning_bg"]} !important;
+            border: 1px solid var(--line) !important;
+        }}
+
+        .stProgress > div > div {{
+            background: {palette["progress_track"]} !important;
+        }}
+
+        .stProgress > div > div > div {{
+            background: linear-gradient(90deg, #22d3ee, #06b6d4, #0891b2) !important;
+        }}
+
+        .theme-toggle-card {{
+            border-radius: 14px;
+            padding: 12px 14px 10px;
+            margin: 8px 0 14px;
+        }}
+
+        .theme-toggle-title {{
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--cyan-700) !important;
+            margin-bottom: 6px;
+        }}
+
+        .theme-toggle-sub {{
+            font-size: 12px;
+            margin-bottom: 2px;
+        }}
         </style>
         """,
         unsafe_allow_html=True,

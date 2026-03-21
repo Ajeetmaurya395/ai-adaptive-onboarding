@@ -6,11 +6,11 @@ Instructions:
 3. Determine seniority level (Junior/Mid/Senior/Lead)
 
 Output Format (STRICT JSON - no markdown, no explanations):
-{
+{{
   "skills": ["RequiredSkill1", "RequiredSkill2"],
   "role": "Job Title",
   "seniority": "Seniority Level"
-}
+}}
 
 Job Description Text:
 {text}

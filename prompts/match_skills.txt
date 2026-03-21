@@ -36,42 +36,42 @@ Seniority Level: {seniority_level}
 
 ### OUTPUT FORMAT (STRICT JSON - NO MARKDOWN, NO EXPLANATIONS)
 
-{
+{{
   "matched_skills": [
-    {
+    {{
       "candidate_skill": "Exact skill text from candidate",
       "required_skill": "Matching requirement text",
       "normalized_skill": "Canonical form used for matching",
       "confidence": 0.95,
       "match_type": "exact" | "synonym" | "partial" | "transferable",
       "notes": "Brief explanation of match rationale"
-    }
+    }}
   ],
   "missing_skills": [
-    {
+    {{
       "skill": "Required skill not found in candidate",
       "normalized_skill": "Canonical form",
       "priority": "Critical" | "Important" | "Nice-to-have",
       "reason": "Why this skill matters for the role",
       "transferable_alternatives": [
-        {
+        {{
           "candidate_skill": "Related skill candidate has",
           "transferability_score": 0.7,
           "gap_description": "What's still missing despite this alternative"
-        }
+        }}
       ],
       "suggested_learning_path": "Brief recommendation to acquire this skill"
-    }
+    }}
   ],
   "extra_skills": [
-    {
+    {{
       "skill": "Candidate skill not required for role",
       "normalized_skill": "Canonical form",
       "potential_value": "How this skill could benefit the role or team",
       "related_roles": ["Other roles where this skill is valuable"]
-    }
+    }}
   ],
-  "match_summary": {
+  "match_summary": {{
     "total_required": 12,
     "exact_matches": 7,
     "synonym_matches": 2,
@@ -81,16 +81,16 @@ Seniority Level: {seniority_level}
     "weighted_match_score": 87.5,
     "overall_fit": "Strong" | "Moderate" | "Weak" | "Poor",
     "fit_explanation": "One-sentence summary of candidacy fit"
-  },
+  }},
   "recommendations": [
-    {
+    {{
       "type": "skill_development" | "highlight_strength" | "reframe_experience",
       "priority": "High" | "Medium" | "Low",
       "action": "Specific, actionable recommendation",
       "impact": "Expected improvement in match score or candidacy"
-    }
+    }}
   ]
-}
+}}
 
 ### MATCHING RULES
 
@@ -153,58 +153,58 @@ Seniority Level: "Mid-Level"
 
 ### EXAMPLE OUTPUT (TRUNCATED FOR BREVITY)
 
-{
+{{
   "matched_skills": [
-    {
+    {{
       "candidate_skill": "Python",
       "required_skill": "Python",
       "normalized_skill": "Python",
       "confidence": 1.0,
       "match_type": "exact",
       "notes": "Direct match on core programming language"
-    },
-    {
+    }},
+    {{
       "candidate_skill": "SQL",
       "required_skill": "SQL",
       "normalized_skill": "SQL",
       "confidence": 1.0,
       "match_type": "exact",
       "notes": "Direct match on database querying skill"
-    },
-    {
+    }},
+    {{
       "candidate_skill": "Pandas",
       "required_skill": "Machine Learning",
       "normalized_skill": "Python Data Analysis",
       "confidence": 0.72,
       "match_type": "partial",
       "notes": "Pandas is foundational for ML data preparation but doesn't cover modeling"
-    }
+    }}
   ],
   "missing_skills": [
-    {
+    {{
       "skill": "AWS",
       "normalized_skill": "AWS",
       "priority": "Critical",
       "reason": "Role requires cloud infrastructure deployment and management",
       "transferable_alternatives": [],
       "suggested_learning_path": "Start with AWS Cloud Practitioner, then Solutions Architect Associate"
-    },
-    {
+    }},
+    {{
       "skill": "Docker",
       "normalized_skill": "Docker",
       "priority": "Important",
       "reason": "Containerization is essential for reproducible ETL pipeline deployment",
       "transferable_alternatives": [
-        {
+        {{
           "candidate_skill": "Git",
           "transferability_score": 0.45,
           "gap_description": "Git manages code versioning but doesn't containerize applications"
-        }
+        }}
       ],
       "suggested_learning_path": "Complete Docker Mastery course focusing on multi-stage builds"
-    }
+    }}
   ],
-  "match_summary": {
+  "match_summary": {{
     "total_required": 6,
     "exact_matches": 2,
     "synonym_matches": 0,
@@ -214,22 +214,22 @@ Seniority Level: "Mid-Level"
     "weighted_match_score": 68.5,
     "overall_fit": "Moderate",
     "fit_explanation": "Strong foundational skills but missing critical cloud infrastructure experience"
-  },
+  }},
   "recommendations": [
-    {
+    {{
       "type": "skill_development",
       "priority": "High",
       "action": "Complete AWS fundamentals certification within 8 weeks",
       "impact": "Would increase match score by ~15 points and address critical gap"
-    },
-    {
+    }},
+    {{
       "type": "highlight_strength",
       "priority": "Medium",
       "action": "Emphasize Pandas experience as foundation for ML pipeline work",
       "impact": "Positions candidate as ready to upskill into modeling tasks"
-    }
+    }}
   ]
-}
+}}
 
 ### FINAL INSTRUCTIONS
 
