@@ -1,0 +1,16 @@
+Business Intelligence Analyst
+
+We are hiring a data-focused analyst to support product, marketing, and operations teams with reporting and insight generation.
+
+Required Skills:
+- SQL for data extraction and transformation
+- Excel for analysis and reporting
+- Tableau or Power BI for dashboard creation
+- Data Analysis and KPI interpretation
+- Python for lightweight analytics automation
+- Communication skills for presenting findings to stakeholders
+
+Preferred:
+- Project Management experience
+- Familiarity with Pandas and NumPy
+- Ability to work across non-technical teams

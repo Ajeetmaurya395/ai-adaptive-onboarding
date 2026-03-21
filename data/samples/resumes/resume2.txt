@@ -1,0 +1,4 @@
+Data Analyst with 4 years of experience turning operational and product data into dashboards and decision-ready insights.
+Strong in SQL, Excel, Tableau, and Power BI, with working knowledge of Python, Pandas, and basic statistics.
+Built recurring KPI reporting for sales and operations teams, automated spreadsheet-heavy workflows, and improved data accuracy across weekly business reviews.
+Comfortable translating stakeholder questions into structured analysis and presenting findings clearly to leadership and non-technical teams.

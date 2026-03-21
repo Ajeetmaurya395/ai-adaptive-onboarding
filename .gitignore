@@ -105,3 +105,12 @@ docs/_build/
 # Hugging Face Cache
 # -----------------------------
 .cache/
+
+# -----------------------------
+# O*NET Raw Data (large, re-downloadable)
+# -----------------------------
+data/onet_raw/
+data/onet_occupations.json
+data/onet_tech_skills.json
+data/skill_lookup.json
+data/chroma_db/

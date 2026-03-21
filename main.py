@@ -268,7 +268,10 @@ Examples:
     
     # Default: run application
     print("🔧 Initializing...")
-    init_db()
+    try:
+        init_db()
+    except Exception as e:
+        print(f"⚠️  Database connection failed: {e}")
     
     # Pre-flight checks
     if not check_dependencies():

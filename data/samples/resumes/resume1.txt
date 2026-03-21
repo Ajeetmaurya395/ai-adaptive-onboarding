@@ -1,0 +1,5 @@
+Senior Software Engineer with 5+ years of experience building scalable web applications and cloud-native services.
+Strong in Python, Django, PostgreSQL, AWS (EC2, S3, Lambda), Docker, and Kubernetes.
+Built CI/CD pipelines for multi-service deployments and supported cloud migration initiatives across internal platforms.
+Comfortable collaborating with product, security, and platform teams in agile delivery environments.
+Led a team of 4 developers to deliver a production migration project ahead of schedule while mentoring junior engineers.

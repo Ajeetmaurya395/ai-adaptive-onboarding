@@ -15,7 +15,7 @@ for _stream in (sys.stdout, sys.stderr):
         except Exception:
             pass
 
-from app.assets.theme import inject_css
+from app.assets.theme import inject_css, load_css
 from app.components.layout import render_page_header, render_footer, render_section_intro
 from app.components.navbar import render_sidebar
 from app.database import init_db, get_history, get_user_stats
@@ -27,11 +27,32 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+def init_session_state():
+    """Initialize ALL required keys at startup to prevent KeyErrors."""
+    defaults = {
+        "analysis_result": None,
+        "reasoning_trace": "No trace available. Please run an analysis first.",
+        "skills": {"matched": [], "missing": []},
+        "db_available": False,
+        "logged_in": False,
+        "user_id": None,
+        "username": None
+    }
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
+init_session_state()
+
+load_css()
+
 db_init_error = None
 try:
     init_db()
+    st.session_state.db_available = True
 except Exception as exc:
     db_init_error = exc
+    st.session_state.db_available = False
 
 inject_css()
 render_sidebar()
@@ -88,7 +109,7 @@ def _render_logged_in() -> None:
         eyebrow="Dashboard",
     )
 
-    if st.session_state.get("user_id") != "demo_user":
+    if st.session_state.get("user_id") != "demo_user" and st.session_state.get("db_available"):
         with st.spinner("Loading stats..."):
             stats = get_user_stats(st.session_state["user_id"])
 
@@ -103,6 +124,9 @@ def _render_logged_in() -> None:
         col3.metric("Best Score", f"{stats.get('best_score', 0):.1f}%")
         last = stats.get("last_analysis")
         col4.metric("Last Analysis", last.strftime("%b %d") if last else "Never")
+
+    elif not st.session_state.get("db_available"):
+        st.info("Database-backed performance snapshots are unavailable right now, but you can still explore the app safely.")
 
     st.write("")
     render_section_intro(
@@ -121,7 +145,7 @@ def _render_logged_in() -> None:
         if st.button("History", use_container_width=True):
             st.switch_page("pages/history.py")
 
-    if st.session_state.get("user_id") != "demo_user":
+    if st.session_state.get("user_id") != "demo_user" and st.session_state.get("db_available"):
         st.write("")
         st.subheader("Recent Activity")
         history = get_history(st.session_state["user_id"], days=7)
@@ -138,6 +162,8 @@ def _render_logged_in() -> None:
                     c.write(f"Score: {item.get('score', 0)}%")
         else:
             st.info("No recent analyses found. Start with a new upload.")
+    elif st.session_state.get("user_id") != "demo_user":
+        st.warning("History is temporarily unavailable because the database connection could not be established.")
 
     render_footer()
 

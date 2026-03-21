@@ -1,6 +1,8 @@
 import os
 import json
 import time
+from typing import List, Dict
+
 import requests
 from dotenv import load_dotenv
 
@@ -8,16 +10,20 @@ load_dotenv()
 
 HF_TOKEN = os.getenv("HF_TOKEN")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-7B-Instruct")
-API_URL = f"https://api-inference.huggingface.co/models/{MODEL_NAME}"
+API_URL = "https://router.huggingface.co/v1/chat/completions"
 
 class LLMService:
     def __init__(self):
         self.headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-        self.max_retries = 3
-        self.retry_delay = 2
+        self.max_retries = 1
+        self.retry_delay = 0.25
+        self.has_token = bool(HF_TOKEN)
 
     def _query(self, payload):
         """Send request to Hugging Face Inference API with retry logic"""
+        if not self.has_token:
+            return None
+
         for attempt in range(self.max_retries):
             try:
                 response = requests.post(
@@ -68,35 +74,69 @@ class LLMService:
                     pass
             return {}
 
-    def _generate_mock(self, prompt_type):
-        """Fallback mock responses for demo/testing"""
+    def _generate_mock(self, prompt_type, user_prompt=""):
+        """Improved adaptive mock responses that use the input text."""
+        # Simple extraction for demo purposes when API is down
+        text = user_prompt.lower()
+        extracted_skills = []
+        common_skills = [
+            "python", "javascript", "aws", "docker", "kubernetes", "sql", "react",
+            "java", "go", "terraform", "jenkins", "prometheus", "cloudformation",
+            "github actions", "git", "redis", "leadership", "communication",
+            "microservices"
+        ]
+        for s in common_skills:
+            if s in text:
+                extracted_skills.append(" ".join(part.capitalize() for part in s.split()))
+        
+        if not extracted_skills:
+            extracted_skills = ["Communication", "Problem Solving", "Adaptability"]
+
         mocks = {
             "resume": {
-                "skills": ["Python", "SQL", "Data Analysis", "Communication"],
-                "experience_years": 3,
-                "summary": "Experienced software developer with strong analytical skills"
+                "skills": extracted_skills[:5],
+                "experience_years": 5,
+                "summary": "Experienced professional with background in " + ", ".join(extracted_skills[:3])
             },
             "jd": {
-                "skills": ["Python", "AWS", "Docker", "SQL", "Leadership"],
-                "role": "Senior Data Engineer",
+                "skills": extracted_skills or ["Python", "AWS", "Cloud Infrastructure"],
+                "role": "Software Professional",
                 "seniority": "Senior"
             },
             "roadmap": [
-                {"skill": "AWS", "resource": "AWS Certified Solutions Architect", "duration": "6 weeks", "priority": "High"},
-                {"skill": "Docker", "resource": "Docker Mastery Course", "duration": "3 weeks", "priority": "Medium"},
-                {"skill": "Leadership", "resource": "Technical Leadership Fundamentals", "duration": "2 weeks", "priority": "Medium"}
+                {
+                    "title": f"Mastering {skill}",
+                    "course_name": f"{skill} Advanced Course",
+                    "duration": "4 weeks",
+                    "priority": "High",
+                    "url": "https://coursera.org",
+                    "reasoning": f"Critical gap identified for this role requirement."
+                }
+                for skill in extracted_skills[:5]
             ],
-            "trace": "The candidate demonstrates strong foundational skills but lacks cloud infrastructure experience (AWS, Docker) required for the Senior Data Engineer role. Focusing on cloud certification and containerization will bridge this gap effectively."
+            "trace": f"The candidate shows strength in {', '.join(extracted_skills[:2])} but needs to develop deeper expertise in other required areas."
         }
         return mocks.get(prompt_type, {})
 
+    def _generate_chat_mock(self, messages: List[Dict[str, str]]) -> str:
+        latest_user_message = ""
+        for message in reversed(messages):
+            if message.get("role") == "user":
+                latest_user_message = message.get("content", "")
+                break
+        latest_user_message = latest_user_message.strip()
+        if not latest_user_message:
+            latest_user_message = "Tell me about my analysis."
+
+        return (
+            "I could not reach the live Qwen endpoint just now, so I am answering from the local fallback context. "
+            f"Your latest question was: \"{latest_user_message[:220]}\". "
+            "If you ask about your analysis, roadmap, missing skills, or learning resources, I can still guide you with the data already available in the app."
+        )
+
     def generate(self, system_prompt, user_prompt, response_type="json"):
         """
-        Generate response from Qwen model with chat formatting
-        Args:
-            system_prompt: System instruction for the model
-            user_prompt: User input/content to process
-            response_type: "json" for structured output, "text" for plain text
+        Generate response from Qwen model with chat formatting.
         """
         messages = [
             {"role": "system", "content": system_prompt},
@@ -104,14 +144,13 @@ class LLMService:
         ]
         
         payload = {
+            "model": MODEL_NAME,
             "messages": messages,
-            "temperature": 0.2,
+            "temperature": 0.1 if response_type == "json" else 0.7,
             "max_tokens": 1024,
-            "return_full_text": False
+            "stream": False
         }
         
-        if response_type == "json":
-            payload["temperature"] = 0.1  
         result = self._query(payload)
         
         if result and "choices" in result:
@@ -120,9 +159,31 @@ class LLMService:
                 return self._parse_json_response(content)
             return content
         
-        print("⚠️ Using mock response (API unavailable or failed)")
-        return self._generate_mock("resume" if "resume" in user_prompt.lower() else 
-                                   "jd" if "job" in user_prompt.lower() else
-                                   "roadmap" if "roadmap" in user_prompt.lower() else "trace")
+        print("⚠️ Using adaptive mock response (API unavailable or failed)")
+        p_type = ("resume" if "resume" in user_prompt.lower() or "candidate" in user_prompt.lower() else 
+                  "jd" if "job" in user_prompt.lower() or "requirements" in user_prompt.lower() else
+                  "roadmap" if "roadmap" in user_prompt.lower() else "trace")
+        return self._generate_mock(p_type, user_prompt)
+
+    def chat(self, messages: List[Dict[str, str]], system_prompt: str | None = None, temperature: float = 0.4, max_tokens: int = 900) -> str:
+        chat_messages = []
+        if system_prompt:
+            chat_messages.append({"role": "system", "content": system_prompt})
+        chat_messages.extend(messages)
+
+        payload = {
+            "model": MODEL_NAME,
+            "messages": chat_messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": False,
+        }
+
+        result = self._query(payload)
+        if result and "choices" in result:
+            return result["choices"][0]["message"]["content"]
+
+        print("⚠️ Using adaptive chat fallback (API unavailable or failed)")
+        return self._generate_chat_mock(chat_messages)
 
 llm = LLMService()

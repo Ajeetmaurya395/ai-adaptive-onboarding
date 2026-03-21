@@ -1,0 +1,16 @@
+Senior Cloud Engineer - TechCorp
+
+We are seeking an experienced engineer to lead cloud infrastructure initiatives and improve deployment reliability.
+
+Required Skills:
+- Advanced Python programming
+- AWS services including EC2, S3, Lambda, RDS, and CloudFormation
+- Containerization with Docker and Kubernetes
+- Infrastructure as Code with Terraform or CloudFormation
+- CI/CD using GitHub Actions or Jenkins
+- Monitoring and observability with CloudWatch or Prometheus
+
+Preferred:
+- Experience with microservices architecture
+- Knowledge of security best practices
+- Leadership and mentoring experience

@@ -3,10 +3,13 @@ import streamlit as st
 
 _MAIN_NAV_ITEMS = [
     (["ui.py", "../ui.py", "app/ui.py"], "Home", "🏠"),
+    (["pages/hackathon.py", "hackathon.py", "../pages/hackathon.py", "app/pages/hackathon.py"], "Hackathon", "🏆"),
     (["pages/upload.py", "upload.py", "../pages/upload.py", "app/pages/upload.py"], "Upload", "📄"),
     (["pages/analysis.py", "analysis.py", "../pages/analysis.py", "app/pages/analysis.py"], "Analysis", "📊"),
     (["pages/roadmap.py", "roadmap.py", "../pages/roadmap.py", "app/pages/roadmap.py"], "Roadmap", "🗺️"),
     (["pages/reasoning.py", "reasoning.py", "../pages/reasoning.py", "app/pages/reasoning.py"], "Reasoning", "🧠"),
+    (["pages/mock_interview.py", "mock_interview.py", "../pages/mock_interview.py", "app/pages/mock_interview.py"], "Mock Interview", "🎙️"),
+    (["pages/assistant.py", "assistant.py", "../pages/assistant.py", "app/pages/assistant.py"], "Assistant", "💬"),
     (["pages/history.py", "history.py", "../pages/history.py", "app/pages/history.py"], "History", "📜"),
     (["pages/evaluation.py", "evaluation.py", "../pages/evaluation.py", "app/pages/evaluation.py"], "Evaluation", "🔎"),
 ]
@@ -33,6 +36,9 @@ def _render_page_links(items: list[tuple[list[str], str, str]]) -> None:
 
 
 def render_sidebar() -> None:
+    if "app_surface_mode" not in st.session_state:
+        st.session_state.app_surface_mode = "Light"
+
     st.sidebar.markdown(
         """
         <div class="sidebar-brand">
@@ -41,6 +47,23 @@ def render_sidebar() -> None:
         </div>
         """,
         unsafe_allow_html=True,
+    )
+
+    st.sidebar.markdown(
+        """
+        <div class="theme-toggle-card">
+            <div class="theme-toggle-title">Appearance</div>
+            <div class="theme-toggle-sub">Keep one glass palette across the whole workspace.</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.sidebar.radio(
+        "Workspace appearance",
+        ["Light", "Dark"],
+        key="app_surface_mode",
+        horizontal=True,
+        label_visibility="collapsed",
     )
 
     st.sidebar.markdown('<div class="sidebar-section">Navigation</div>', unsafe_allow_html=True)
