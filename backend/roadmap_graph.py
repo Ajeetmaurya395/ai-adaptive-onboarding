@@ -3,6 +3,7 @@ from typing_extensions import TypedDict
 from langgraph.graph import StateGraph, END
 import operator
 
+from backend.data_loader import data_loader
 from backend.resource_library import build_learning_resources
 
 class RoadmapState(TypedDict):
@@ -14,15 +15,10 @@ class RoadmapState(TypedDict):
 
 def get_category_for_skill(skill: str) -> str:
     """Helper to map a skill to its O*NET category."""
-    import json
-    try:
-        with open("data/skill_taxonomy.json", "r") as f:
-            taxonomy = json.load(f)["categories"]
-        for cat_label, skill_list in taxonomy.items():
-            if any(skill.lower() == s.lower() for s in skill_list):
-                return cat_label
-    except:
-        pass
+    taxonomy = data_loader.load_json("skill_taxonomy.json", {}).get("categories", {})
+    for cat_label, skill_list in taxonomy.items():
+        if any(skill.lower() == s.lower() for s in skill_list):
+            return cat_label
     return None
 
 def search_courses_node(state: RoadmapState):

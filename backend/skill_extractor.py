@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from backend.data_loader import data_loader
 from services.llm_service import llm
 
 
@@ -36,11 +37,19 @@ class SkillExtractor:
 
     def __init__(self, taxonomy_path: Optional[str] = None):
         self.project_root = Path(__file__).resolve().parents[1]
-        resolved_taxonomy = Path(taxonomy_path) if taxonomy_path else self.project_root / "data" / "skill_taxonomy.json"
+        if taxonomy_path:
+            taxonomy_candidate = Path(taxonomy_path)
+            resolved_taxonomy = (
+                taxonomy_candidate
+                if taxonomy_candidate.exists()
+                else data_loader.get_file_path(taxonomy_candidate.name)
+            )
+        else:
+            resolved_taxonomy = data_loader.get_file_path("skill_taxonomy.json")
         self.taxonomy = self._load_json(resolved_taxonomy)
-        self.skill_lookup = self._load_json(self.project_root / "data" / "skill_lookup.json")
-        self.course_catalog = self._load_json(self.project_root / "data" / "course_catalog.json")
-        self.onet_tools = self._load_json(self.project_root / "data" / "onet_tech_skills.json")
+        self.skill_lookup = data_loader.load_json("skill_lookup.json", {})
+        self.course_catalog = data_loader.load_json("course_catalog.json", {})
+        self.onet_tools = data_loader.load_json("onet_tech_skills.json", {})
         self.known_skills = self._build_known_skills()
         self._sorted_skill_keys = sorted(self.known_skills.keys(), key=len, reverse=True)
 
@@ -207,4 +216,4 @@ class SkillExtractor:
         }
 
 
-skill_extractor = SkillExtractor(taxonomy_path="data/skill_taxonomy.json")
+skill_extractor = SkillExtractor()

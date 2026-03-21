@@ -1,15 +1,70 @@
-version: '3.8'
-
 services:
-  onboarding-app:
-    build: .
+  onboarding-api:
+    build:
+      context: .
+      target: runtime
+    image: ai-adaptive-onboarding:latest
+    command: uvicorn backend.api:app --host 0.0.0.0 --port 8000
+    env_file:
+      - .env
     ports:
-      - "8502:8501"
+      - "8000:8000"
     environment:
-      - HF_TOKEN=${HF_TOKEN}
-      - MODEL_NAME=${MODEL_NAME:-Qwen/Qwen2.5-7B-Instruct}
-      - MONGODB_URI=${MONGODB_URI:-mongodb://localhost:27017/onboarding}
+      HF_TOKEN: ${HF_TOKEN}
+      MODEL_NAME: ${MODEL_NAME:-Qwen/Qwen2.5-7B-Instruct}
+      MONGODB_URI: ${MONGODB_URI}
+      MONGODB_DB: ${MONGODB_DB:-ai_onboarding}
+      DATA_SOURCE: ${DATA_SOURCE:-cloud}
+      VECTOR_BACKEND: ${VECTOR_BACKEND:-atlas}
+      VECTOR_EMBEDDING_MODEL: ${VECTOR_EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      ATLAS_VECTOR_FIELD: ${ATLAS_VECTOR_FIELD:-embedding}
+      ATLAS_SKILLS_COLLECTION: ${ATLAS_SKILLS_COLLECTION:-skill_vectors}
+      ATLAS_SKILLS_INDEX: ${ATLAS_SKILLS_INDEX:-skills_vector_index}
+      ATLAS_OCCUPATIONS_COLLECTION: ${ATLAS_OCCUPATIONS_COLLECTION:-occupation_vectors}
+      ATLAS_OCCUPATIONS_INDEX: ${ATLAS_OCCUPATIONS_INDEX:-occupations_vector_index}
+      ATLAS_COURSES_COLLECTION: ${ATLAS_COURSES_COLLECTION:-course_vectors}
+      ATLAS_COURSES_INDEX: ${ATLAS_COURSES_INDEX:-courses_vector_index}
+      HF_DATASET_REPO: ${HF_DATASET_REPO:-}
+      CACHE_DIR: ${CACHE_DIR:-/tmp/ai_onboarding/data}
+      API_PORT: 8000
     volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
+      - logs:/app/logs
+      - hf-cache:/tmp/ai_onboarding/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
+
+  onboarding-ui:
+    build:
+      context: .
+      target: runtime
+    image: ai-adaptive-onboarding:latest
+    command: streamlit run app/ui.py --server.port=8501 --server.address=0.0.0.0
+    env_file:
+      - .env
+    depends_on:
+      onboarding-api:
+        condition: service_healthy
+    ports:
+      - "8501:8501"
+    environment:
+      API_BASE_URL: ${API_BASE_URL:-http://onboarding-api:8000}
+      MONGODB_URI: ${MONGODB_URI}
+      MONGODB_DB: ${MONGODB_DB:-ai_onboarding}
+    volumes:
+      - logs:/app/logs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=5)"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  logs:
+  hf-cache:

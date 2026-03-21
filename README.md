@@ -49,11 +49,14 @@ That makes onboarding more efficient for experienced hires while keeping it stru
 
 ```text
 Resume / JD Input
+    -> Streamlit UI
+    -> FastAPI /analyze
     -> dataset-grounded parsing
     -> skill normalization
     -> candidate vs role matching
     -> missing-skill prioritization
     -> adaptive roadmap graph
+    -> MongoDB persistence
     -> reasoning trace + assistant Q&A
     -> evaluation + history
 ```
@@ -79,12 +82,12 @@ It works like this:
 
 - **Frontend**: Streamlit
 - **Visualization**: Plotly
-- **Backend**: Python
+- **Backend**: FastAPI + Python
 - **LLM**: `Qwen/Qwen2.5-7B-Instruct` through the Hugging Face router
-- **Embeddings / retrieval**: ChromaDB + local dataset grounding
+- **Embeddings / retrieval**: ChromaDB + JSON fallback through a cloud-aware data loader
 - **Persistence**:
-  - local SQLite history for analysis artifacts
-  - optional MongoDB-backed user and history flows already present in the app
+  - MongoDB-backed user, history, and analysis persistence
+  - legacy SQLite helper kept only as a local fallback utility
 - **Evaluation**: custom metrics utility in `evaluation/metrics.py`
 
 ## Datasets and Sources
@@ -129,10 +132,13 @@ ai-adaptive-onboarding-remote/
 │   │   ├── reasoning.py
 │   │   ├── roadmap.py
 │   │   └── upload.py
+│   ├── api_client.py
 │   ├── database.py
 │   ├── database_sqlite.py
 │   └── ui.py
 ├── backend/
+│   ├── api.py
+│   ├── data_loader.py
 │   ├── gap_engine.py
 │   ├── parser.py
 │   ├── resource_library.py
@@ -168,18 +174,46 @@ ai-adaptive-onboarding-remote/
 
 ### Environment Variables
 
-Create `.env` in the project root:
+Start from the production-ready template:
+
+```bash
+cp .env.example .env
+```
+
+Then update `.env` in the project root:
 
 ```env
 HF_TOKEN=your_hugging_face_token
 MODEL_NAME=Qwen/Qwen2.5-7B-Instruct
-MONGODB_URI=mongodb://localhost:27017
+MONGODB_URI=mongodb+srv://<atlas-uri>
 MONGODB_DB=ai_onboarding
+API_BASE_URL=http://onboarding-api:8000
+DATA_SOURCE=cloud
+HF_DATASET_REPO=your-username/onboarding-assets
+CACHE_DIR=/tmp/ai_onboarding/data
+VECTOR_BACKEND=atlas
+ATLAS_SKILLS_COLLECTION=skill_vectors
+ATLAS_SKILLS_INDEX=skills_vector_index
+ATLAS_OCCUPATIONS_COLLECTION=occupation_vectors
+ATLAS_OCCUPATIONS_INDEX=occupations_vector_index
+ATLAS_COURSES_COLLECTION=course_vectors
+ATLAS_COURSES_INDEX=courses_vector_index
 ```
 
-### Data Bootstrapping (Required)
+### Data Bootstrapping
 
-Since large datasets are excluded from the repository to keep it lightweight, you must run the following scripts to initialize the O*NET taxonomy and vector indices:
+The backend now supports two modes:
+
+- `DATA_SOURCE=local`: read directly from `data/`
+- `DATA_SOURCE=cloud`: download missing assets from `HF_DATASET_REPO` into `CACHE_DIR` with `huggingface_hub`
+
+The vector layer also supports:
+
+- `VECTOR_BACKEND=auto`: try Atlas Vector Search first, then fall back to local matching
+- `VECTOR_BACKEND=atlas`: use Atlas Vector Search as the primary backend for production
+- `VECTOR_BACKEND=local`: keep the legacy local Chroma/JSON behavior
+
+If you want the full local vector setup, you can still bootstrap the datasets and Chroma index:
 
 ```bash
 # 1. Download O*NET Raw Data
@@ -192,6 +226,15 @@ python scripts/build_taxonomy.py
 python scripts/index_data_chroma.py
 ```
 
+To seed Atlas Vector Search collections instead, run:
+
+```bash
+python scripts/index_data_atlas.py --dry-run
+python scripts/index_data_atlas.py
+python scripts/create_atlas_vector_indexes.py
+python scripts/verify_atlas_vector_search.py
+```
+
 ### Local Run
 
 macOS / Linux:
@@ -201,6 +244,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
+uvicorn backend.api:app --host 0.0.0.0 --port 8000
 streamlit run app/ui.py
 ```
 
@@ -211,12 +255,35 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -r requirements.txt
+uvicorn backend.api:app --host 0.0.0.0 --port 8000
 streamlit run app/ui.py
 ```
 
 Open:
 
+- `http://localhost:8000/docs`
 - `http://localhost:8501`
+
+### Docker Run
+
+The compose setup is now production-oriented: it does not depend on bind-mounted local `data/` or `logs/`, and it reuses Atlas + Hugging Face Hub instead.
+
+```bash
+cp .env.example .env
+# fill in HF_TOKEN, MONGODB_URI, and HF_DATASET_REPO
+docker compose up --build
+```
+
+Open:
+
+- `http://localhost:8501`
+- `http://localhost:8000/docs`
+
+Notes:
+
+- The API waits on Atlas/HF configuration from `.env`.
+- The UI waits for the API health check before starting.
+- Downloaded cloud assets are cached in the named `hf-cache` Docker volume instead of the local project tree.
 
 ## Docker
 
@@ -226,10 +293,10 @@ Build:
 docker build -t ai-adaptive-onboarding .
 ```
 
-Run:
+Run both services:
 
 ```bash
-docker run --rm -p 8501:8501 --env-file .env ai-adaptive-onboarding
+docker compose up --build
 ```
 
 ## Typical Demo Flow

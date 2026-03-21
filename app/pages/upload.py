@@ -4,17 +4,17 @@ from typing import Dict, List
 
 import streamlit as st
 from PyPDF2 import PdfReader
+from requests import RequestException
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from app.api_client import API_BASE_URL, analyze_resume_jd, is_api_available
 from app.assets.theme import inject_css
 from app.components.alerts import show_success, show_error
 from app.components.layout import render_page_header, render_footer, render_section_intro
 from app.components.navbar import render_sidebar
-from backend.gap_engine import GapEngine
-from app.database_sqlite import save_analysis_history
 
 inject_css()
 render_sidebar()
@@ -69,6 +69,7 @@ def init_input_state() -> None:
     st.session_state.setdefault("last_uploaded_resume_text", "")
     st.session_state.setdefault("last_uploaded_jd_text", "")
     st.session_state.setdefault("selected_sample_key", "cloud_engineer")
+    st.session_state.setdefault("analysis_trace_steps", [])
 
 
 def read_text_file(path: Path, fallback: str = "") -> str:
@@ -226,6 +227,13 @@ sample_key = st.selectbox(
 sample_meta = SAMPLE_LIBRARY[sample_key]
 st.caption(sample_meta["description"])
 
+if is_api_available():
+    st.caption(f"API backend connected at `{API_BASE_URL}`.")
+else:
+    st.warning(
+        f"Analysis API is unavailable at `{API_BASE_URL}`. Start it with `uvicorn backend.api:app --port 8000` before running analysis."
+    )
+
 quick1, quick2, quick3 = st.columns(3, gap="large")
 with quick1:
     if st.button("Load Sample Resume", use_container_width=True):
@@ -323,54 +331,46 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Initialize the bridge engine
-engine = GapEngine()
-
 def run_analysis_flow(resume_text: str, jd_text: str, switch_page: bool = True):
-    """The functional bridge connecting backend to UI."""
-    with st.spinner("🚀 Running real O*NET + ChromaDB-backed analysis..."):
-        try:
-            # 1. Run the real logic
-            analysis = engine.process(resume_text, jd_text)
-            
-            # 2. Map to the Unified Schema (Section 1 + Section 3 requirements)
-            st.session_state.analysis_result = {
-                "summary": analysis["summary"],
-                "skills": analysis["skills"],
-                "gap": {
-                    "matched_skills": analysis["skills"]["matched"],
-                    "missing_skills": analysis["skills"]["missing"],
-                    "match_score": analysis["summary"]["match_score"],
-                    "category_scores": analysis.get("gap", {}).get(
-                        "category_scores",
-                        {"Technology": 85, "Core Skills": 75, "Knowledge": 70},
-                    ),
-                },
-                "roadmap": analysis["roadmap"],
-                "raw_text": analysis["raw_text"],
-                "resume": analysis.get("resume", {}),
-                "jd": analysis.get("jd", {}),
-                "db_available": True
-            }
-            
-            # 3. Persist to SQLite History
-            user_id = st.session_state.get("user_id", "anonymous")
-            save_analysis_history(
-                user_id,
-                analysis["summary"]["match_score"],
-                analysis["skills"]["matched"],
-                analysis["skills"]["missing"],
-                analysis["roadmap"]
-            )
-            
-            show_success("Real-time analysis complete using the grounded sample-aware roadmap flow.")
-            
-            if switch_page:
-                st.switch_page("pages/analysis.py")
-            
-        except Exception as exc:
-            show_error(f"Analysis failed: {exc}")
-            st.exception(exc)
+    """Call the FastAPI backend and store the unified result."""
+    status = st.status("Dispatching analysis to the API backend...", expanded=True)
+    status.write("Resume and job description packaged for server-side analysis.")
+    status.write("The frontend is waiting while the backend runs parsing, matching, and roadmap generation.")
+
+    try:
+        analysis = analyze_resume_jd(
+            resume_text,
+            jd_text,
+            user_id=st.session_state.get("user_id"),
+        )
+        analysis["db_available"] = bool(
+            analysis.get("persistence", {}).get("saved") or st.session_state.get("db_available")
+        )
+        st.session_state.analysis_result = analysis
+        st.session_state.analysis_trace_steps = analysis.get("trace_steps", [])
+
+        for trace_step in st.session_state.analysis_trace_steps:
+            status.write(trace_step.get("message", "Completed backend step."))
+
+        persistence = analysis.get("persistence", {})
+        if persistence.get("saved"):
+            status.write("MongoDB persistence complete.")
+        elif st.session_state.get("user_id") not in {None, "", "demo_user"}:
+            status.write("Analysis completed, but persistence was skipped or unavailable.")
+
+        status.update(label="Analysis complete.", state="complete")
+        show_success("Analysis complete through the FastAPI backend.")
+
+        if switch_page:
+            st.switch_page("pages/analysis.py")
+
+    except RequestException as exc:
+        status.update(label="API request failed.", state="error")
+        show_error(f"Connection failed: {exc}")
+    except Exception as exc:
+        status.update(label="Analysis failed.", state="error")
+        show_error(f"Analysis failed: {exc}")
+        st.exception(exc)
 
 
 if st.session_state.get("run_sample_analysis"):
@@ -425,5 +425,11 @@ if analysis_result:
         with nav2:
             if st.button("Open Roadmap Page", use_container_width=True):
                 st.switch_page("pages/roadmap.py")
+
+    trace_steps = st.session_state.get("analysis_trace_steps", [])
+    if trace_steps:
+        with st.expander("Backend Trace", expanded=False):
+            for index, trace_step in enumerate(trace_steps, start=1):
+                st.markdown(f"{index}. {trace_step.get('message', 'Completed step.')}")
 
 render_footer()

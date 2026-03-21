@@ -10,61 +10,89 @@ The application requires several environment variables and secrets:
 |----------|-------------|--------|
 | `HF_TOKEN` | Hugging Face API Token | [Hugging Face Settings](https://huggingface.co/settings/tokens) |
 | `MODEL_NAME` | LLM Model ID | e.g., `Qwen/Qwen2.5-7B-Instruct` |
-| `MONGODB_URI` | Connection string for results persistence | MongoDB Atlas or Local |
+| `MONGODB_URI` | Connection string for results persistence | MongoDB Atlas |
+| `API_BASE_URL` | Streamlit-to-API base URL | `http://onboarding-api:8000` in Docker |
+| `DATA_SOURCE` | `local` or `cloud` asset resolution mode | deployment env |
+| `HF_DATASET_REPO` | Hugging Face dataset repo that stores JSON assets | Hugging Face Hub |
+| `CACHE_DIR` | Writable local cache for downloaded assets | e.g. `/tmp/ai_onboarding/data` |
+| `VECTOR_BACKEND` | `auto`, `atlas`, or `local` vector retrieval mode | deployment env |
+| `ATLAS_*_COLLECTION` / `ATLAS_*_INDEX` | Atlas Vector Search collection and index names | Atlas configuration |
+
+Copy the checked-in template first:
+
+```bash
+cp .env.example .env
+```
+
+Then fill in at minimum:
+
+- `HF_TOKEN`
+- `MONGODB_URI`
+- `HF_DATASET_REPO`
 
 ## 2. Data Persistence (Critical)
 
-The O*NET taxonomy and search indices are stored as JSON files in the `data/` directory. Since these are now excluded from the git repository to keep it lightweight, you must ensure they are persistent:
+The backend now resolves datasets through `backend/data_loader.py`. For deployment you can either ship local data files or let the API cache remote assets from Hugging Face Hub into `/tmp`.
 
-- **Option A (Self-Bootstrapping)**: Run the bootstrap scripts during the build or deployment phase:
+- **Option A (Local Mode)**: Keep `DATA_SOURCE=local` and include the required files in `data/`.
+- **Option B (Cloud Mode)**: Set `DATA_SOURCE=cloud` and `HF_DATASET_REPO=<username/repo>`. Missing files will be downloaded with `huggingface_hub` into `CACHE_DIR`.
+- **Recommended Production Mode**: `DATA_SOURCE=cloud` and `VECTOR_BACKEND=atlas`.
+- **Vector Search Mode**: Point the `ATLAS_*` env vars at your Atlas Vector Search collections and indexes.
+- **Cloud Ingestion**: Use `python scripts/index_data_atlas.py` to read local/HF-managed assets, generate embeddings, and upsert documents into your Atlas vector collections.
+- **Index Creation**: Use `python scripts/create_atlas_vector_indexes.py` to request the three Atlas Vector Search indexes.
+- **Verification**: Use `python scripts/verify_atlas_vector_search.py` to list index status and run sample nearest-neighbor queries.
+- **Optional Full Vector Setup**: Run the bootstrap scripts during the build or deployment phase if you want ChromaDB collections available:
     ```bash
     python scripts/download_onet.py
     python scripts/build_taxonomy.py
     python scripts/index_data_chroma.py
     ```
-- **Option B (Persistent Volume)**: If deploying to a VPS/Cloud, volume-mount a persistent directory to `/app/data` where these files are stored.
 - **Required Files for Operation**:
     - `data/skill_lookup.json`
     - `data/onet_occupations.json`
     - `data/onet_tech_skills.json`
     - `data/course_catalog.json`
-    - `data/chroma_db/` (Vector index)
+    - `data/skill_taxonomy.json`
+    - `data/chroma_db/` (optional vector index)
 
 ## 3. Containerization (Docker)
 
-Create a `Dockerfile` in the root directory:
+The repository now ships with:
 
-```dockerfile
-FROM python:3.11-slim
+- a multi-stage `Dockerfile` that keeps build tooling out of the final image
+- a `docker-compose.yml` that runs API and UI as separate services
+- a `.dockerignore` that avoids copying `.env`, `.venv`, logs, and local vector artifacts into the image
 
-WORKDIR /app
+To start both services:
 
-# Install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application and pre-generated data
-COPY . .
-
-# Expose Streamlit port
-EXPOSE 8501
-
-# Run the application
-CMD ["streamlit", "run", "app/ui.py", "--server.port=8501", "--server.address=0.0.0.0"]
+```bash
+docker compose up --build
 ```
+
+Service behavior:
+
+- `onboarding-api` serves FastAPI on port `8000`
+- `onboarding-ui` serves Streamlit on port `8501`
+- the UI waits for the API health check
+- Hugging Face asset downloads are cached in the named `hf-cache` volume
+- local bind mounts are no longer required for production
 
 ## 4. Deployment Platforms
 
-### Option A: Streamlit Community Cloud (Easiest)
-1. Push code to GitHub.
-2. Connect repository to [Streamlit Cloud](https://share.streamlit.io/).
-3. Add `HF_TOKEN` and `MONGODB_URI` to "Secrets".
+### Option A: Docker Host / VPS (Recommended)
+1. Provision any small VM or container host with Docker.
+2. Copy `.env.example` to `.env` and fill in Atlas + Hugging Face values.
+3. Run `docker compose up --build -d`.
+4. Put Nginx, Caddy, or your platform proxy in front of ports `8000` and `8501`.
 
-### Option B: Cloud VPS (AWS/GCP/DigitalOcean)
-1. Deploy via Docker Compose.
-2. Use **Nginx** as a reverse proxy with SSL (Certbot/Let's Encrypt).
-3. Ensure port 8501 is restricted to the proxy.
+### Option B: Streamlit Community Cloud + External API
+1. Host the FastAPI service separately on a Docker-capable target.
+2. Deploy the Streamlit app to [Streamlit Cloud](https://share.streamlit.io/).
+3. Set `API_BASE_URL` in Streamlit secrets to the public API URL.
+4. Add `HF_TOKEN`, `MONGODB_URI`, `HF_DATASET_REPO`, and Atlas index env vars to secrets.
 
 ## 5. Scaling Considerations
 - **LLM API**: The current implementation uses the serverless Inference API. For high volumes, consider **Inference Endpoints** (dedicated GPUs) on Hugging Face.
-- **Database**: Ensure MongoDB has proper indexing on `user_id` and `timestamp`.
+- **Database**: Ensure MongoDB Atlas has proper indexing on `user_id` and `timestamp`.
+- **Frontend/API split**: The Streamlit app is now a client of the FastAPI backend, which keeps long-running analysis work out of the UI thread.
+- **Atlas Vector Search**: All three vector indexes should remain queryable before switching fully to `VECTOR_BACKEND=atlas`.

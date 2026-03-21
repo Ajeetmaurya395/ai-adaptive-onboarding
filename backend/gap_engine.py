@@ -1,5 +1,7 @@
 import json
-from typing import Dict, List
+from typing import Callable, Dict, List, Optional
+
+from backend.data_loader import data_loader
 from backend.parser import match_skills, parse_jd, parse_resume
 from backend.roadmap_builder import generate_roadmap
 from services.vector_service import vector_service
@@ -34,10 +36,8 @@ class GapEngine:
 
     def _get_category_scores(self, matched: List[str], missing: List[str]) -> Dict[str, int]:
         """Dynamically calculate scores for Radar Chart based on O*NET taxonomy."""
-        try:
-            with open("data/skill_taxonomy.json", "r") as f:
-                taxonomy = json.load(f)["categories"]
-        except:
+        taxonomy = data_loader.load_json("skill_taxonomy.json", {}).get("categories", {})
+        if not taxonomy:
             return {"Technology": 50, "Core Skills": 50, "Knowledge": 50}
 
         def count_in_cat(skills, cat_name):
@@ -59,12 +59,23 @@ class GapEngine:
             
         return scores
 
-    def process(self, resume_text: str, jd_text: str) -> Dict:
+    def process(
+        self,
+        resume_text: str,
+        jd_text: str,
+        trace_callback: Optional[Callable[[Dict], None]] = None,
+    ) -> Dict:
         """
         The "Functional Bridge": Coordinated analysis flow.
         """
+        def emit(stage: str, message: str) -> None:
+            if trace_callback:
+                trace_callback({"stage": stage, "message": message})
+
         # 1. Parse
+        emit("extract_resume", "Extracting skill signals from the resume.")
         resume_data = parse_resume(resume_text) or {}
+        emit("extract_jd", "Cross-referencing the target role and requirements.")
         jd_data = parse_jd(jd_text) or {}
         
         raw_candidate_skills = resume_data.get("skills", [])
@@ -75,6 +86,7 @@ class GapEngine:
         grounded_required_skills = self._dedupe_preserve_order([self._normalize_with_onet(skill) for skill in raw_required_skills])
 
         # 2. Match with API-assisted logical reasoning, grounded by vector normalization.
+        emit("match_gap", "Matching candidate skills against the role taxonomy.")
         matching_result = match_skills(grounded_candidate_skills, grounded_required_skills, role_detected, seniority)
         matched_normalized = []
         missing_normalized = []
@@ -101,6 +113,7 @@ class GapEngine:
         missing_normalized = self._dedupe_preserve_order(missing_normalized)
 
         # 3. Calculate dynamic scores
+        emit("score_fit", "Computing fit score and category coverage.")
         match_score = int(
             round(
                 matching_result.get("match_summary", {}).get(
@@ -112,7 +125,9 @@ class GapEngine:
         category_scores = self._get_category_scores(matched_normalized, missing_normalized)
         
         # 4. Generate Roadmap
+        emit("build_roadmap", "Generating the adaptive roadmap via LangGraph.")
         roadmap_steps = generate_roadmap(missing_normalized, role_detected)
+        emit("complete", "Analysis complete.")
         
         # 5. Return Unified Schema
         return {

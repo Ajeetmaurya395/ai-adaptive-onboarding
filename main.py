@@ -37,6 +37,8 @@ from services.llm_service import llm
 def check_dependencies():
     """Verify all required dependencies are installed"""
     required = {
+        "fastapi": "fastapi",
+        "uvicorn": "uvicorn",
         "streamlit": "streamlit",
         "pandas": "pandas",
         "plotly": "plotly",
