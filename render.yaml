@@ -20,7 +20,9 @@ services:
       - key: MONGODB_DB
         value: ai_onboarding
       - key: DATA_SOURCE
-        value: local
+        value: cloud
+      - key: HF_DATASET_REPO
+        sync: false
       - key: CACHE_DIR
         value: /tmp/ai_onboarding/data
       - key: VECTOR_BACKEND
