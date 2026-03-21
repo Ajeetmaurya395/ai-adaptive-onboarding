@@ -8,6 +8,7 @@ _MAIN_NAV_ITEMS = [
     (["pages/analysis.py", "analysis.py", "../pages/analysis.py", "app/pages/analysis.py"], "Analysis", "📊"),
     (["pages/roadmap.py", "roadmap.py", "../pages/roadmap.py", "app/pages/roadmap.py"], "Roadmap", "🗺️"),
     (["pages/reasoning.py", "reasoning.py", "../pages/reasoning.py", "app/pages/reasoning.py"], "Reasoning", "🧠"),
+    (["pages/mock_interview.py", "mock_interview.py", "../pages/mock_interview.py", "app/pages/mock_interview.py"], "Mock Interview", "🎙️"),
     (["pages/assistant.py", "assistant.py", "../pages/assistant.py", "app/pages/assistant.py"], "Assistant", "💬"),
     (["pages/history.py", "history.py", "../pages/history.py", "app/pages/history.py"], "History", "📜"),
     (["pages/evaluation.py", "evaluation.py", "../pages/evaluation.py", "app/pages/evaluation.py"], "Evaluation", "🔎"),
