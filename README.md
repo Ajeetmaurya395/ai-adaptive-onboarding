@@ -177,6 +177,21 @@ MONGODB_URI=mongodb://localhost:27017
 MONGODB_DB=ai_onboarding
 ```
 
+### Data Bootstrapping (Required)
+
+Since large datasets are excluded from the repository to keep it lightweight, you must run the following scripts to initialize the O*NET taxonomy and vector indices:
+
+```bash
+# 1. Download O*NET Raw Data
+python scripts/download_onet.py
+
+# 2. Build Skill Taxonomy
+python scripts/build_taxonomy.py
+
+# 3. Index Data into ChromaDB
+python scripts/index_data_chroma.py
+```
+
 ### Local Run
 
 macOS / Linux:

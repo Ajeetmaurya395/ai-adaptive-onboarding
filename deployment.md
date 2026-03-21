@@ -14,13 +14,21 @@ The application requires several environment variables and secrets:
 
 ## 2. Data Persistence (Critical)
 
-The O*NET taxonomy and search indices are stored as JSON files in the `data/` directory.
-- **Production**: These files should be bundled in the Docker image OR mounted as a persistent volume if you plan to update them via scripts.
-- **Required Files**:
+The O*NET taxonomy and search indices are stored as JSON files in the `data/` directory. Since these are now excluded from the git repository to keep it lightweight, you must ensure they are persistent:
+
+- **Option A (Self-Bootstrapping)**: Run the bootstrap scripts during the build or deployment phase:
+    ```bash
+    python scripts/download_onet.py
+    python scripts/build_taxonomy.py
+    python scripts/index_data_chroma.py
+    ```
+- **Option B (Persistent Volume)**: If deploying to a VPS/Cloud, volume-mount a persistent directory to `/app/data` where these files are stored.
+- **Required Files for Operation**:
     - `data/skill_lookup.json`
     - `data/onet_occupations.json`
     - `data/onet_tech_skills.json`
     - `data/course_catalog.json`
+    - `data/chroma_db/` (Vector index)
 
 ## 3. Containerization (Docker)
 
