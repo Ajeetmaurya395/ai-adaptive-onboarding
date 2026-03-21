@@ -91,6 +91,31 @@ Service behavior:
 3. Set `API_BASE_URL` in Streamlit secrets to the public API URL.
 4. Add `HF_TOKEN`, `MONGODB_URI`, `HF_DATASET_REPO`, and Atlas index env vars to secrets.
 
+### Option C: Render Blueprint
+The repository now includes a [render.yaml](/Users/ajeetmaurya/ai-adaptive-onboarding-remote/render.yaml) blueprint for a two-service Render deploy:
+
+- `ai-onboarding-api`
+- `ai-onboarding-ui`
+
+How to launch it:
+
+1. Push the latest repo changes to GitHub.
+2. In Render, choose `New +` -> `Blueprint`.
+3. Select this repository and branch.
+4. Render will detect `render.yaml` and prepare both services.
+5. Enter these secret values when prompted:
+   - `HF_TOKEN`
+   - `MONGODB_URI`
+   - `HF_DATASET_REPO`
+6. Confirm the default Atlas collection/index names unless you changed them.
+7. Deploy the blueprint.
+
+Notes:
+
+- The UI uses Render private-network service discovery through `API_HOST` and `API_PORT`, so you do not need to hardcode a public API URL.
+- The API service exposes `/health`.
+- The UI service uses Streamlit’s `/_stcore/health` endpoint for health checks.
+
 ## 5. Scaling Considerations
 - **LLM API**: The current implementation uses the serverless Inference API. For high volumes, consider **Inference Endpoints** (dedicated GPUs) on Hugging Face.
 - **Database**: Ensure MongoDB Atlas has proper indexing on `user_id` and `timestamp`.

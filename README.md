@@ -285,6 +285,34 @@ Notes:
 - The UI waits for the API health check before starting.
 - Downloaded cloud assets are cached in the named `hf-cache` Docker volume instead of the local project tree.
 
+### Render Deploy
+
+This repository includes a [render.yaml](/Users/ajeetmaurya/ai-adaptive-onboarding-remote/render.yaml) blueprint for Render.
+
+It creates:
+
+- `ai-onboarding-api`
+- `ai-onboarding-ui`
+
+Deploy steps:
+
+```bash
+git push origin main
+```
+
+Then in Render:
+
+1. Create a new `Blueprint`.
+2. Select this repository.
+3. Let Render read `render.yaml`.
+4. Provide:
+   - `HF_TOKEN`
+   - `MONGODB_URI`
+   - `HF_DATASET_REPO`
+5. Deploy.
+
+The UI service automatically connects to the API service through Render service discovery using `API_HOST` and `API_PORT`.
+
 ## Docker
 
 Build:

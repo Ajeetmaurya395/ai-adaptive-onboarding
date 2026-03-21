@@ -4,7 +4,17 @@ from typing import Dict, Optional
 import requests
 
 
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000").rstrip("/")
+def _resolve_api_base_url() -> str:
+    explicit_base_url = (os.getenv("API_BASE_URL") or "").strip()
+    if explicit_base_url:
+        return explicit_base_url.rstrip("/")
+
+    api_host = (os.getenv("API_HOST") or "localhost").strip()
+    api_port = (os.getenv("API_PORT") or "8000").strip()
+    return f"http://{api_host}:{api_port}".rstrip("/")
+
+
+API_BASE_URL = _resolve_api_base_url()
 ANALYZE_URL = f"{API_BASE_URL}/analyze"
 HEALTHCHECK_URL = f"{API_BASE_URL}/health"
 
