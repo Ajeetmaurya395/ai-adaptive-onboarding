@@ -1,10 +1,17 @@
 import os
 from typing import List, Dict
+
 from langchain_huggingface import HuggingFaceEndpoint, HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
+
+from backend.data_loader import data_loader
+
+try:
+    from langchain_community.vectorstores import Chroma
+except Exception:  # pragma: no cover - optional in cloud deploys
+    Chroma = None
 
 load_dotenv()
 
@@ -24,12 +31,30 @@ class LangChainService:
             model_name="sentence-transformers/all-MiniLM-L6-v2"
         )
         
-        # Connect to existing ChromaDB
-        self.course_vectorstore = Chroma(
-            collection_name="course_catalog",
-            embedding_function=self.embeddings,
-            persist_directory="./chroma_db"
-        )
+        self.course_data = data_loader.load_json("course_catalog.json", {}).get("courses", [])
+        self.course_vectorstore = None
+        if Chroma is not None:
+            try:
+                self.course_vectorstore = Chroma(
+                    collection_name="course_catalog",
+                    embedding_function=self.embeddings,
+                    persist_directory="./chroma_db"
+                )
+            except Exception:
+                self.course_vectorstore = None
+
+    def _fallback_course_docs(self, skill: str) -> List[Dict]:
+        normalized_skill = (skill or "").strip().lower()
+        matches = []
+        for course in self.course_data:
+            course_skill = (course.get("skill") or "").strip().lower()
+            title = course.get("title") or f"{skill} Specialist"
+            if normalized_skill and (normalized_skill in course_skill or course_skill in normalized_skill):
+                matches.append({
+                    "title": title,
+                    "url": course.get("url") or "https://coursera.org",
+                })
+        return matches[:2]
 
     def generate_roadmap_steps(self, missing_skills: List[str], role: str) -> List[Dict]:
         """Use RAG to find courses for each missing skill and structure a roadmap."""
@@ -53,8 +78,22 @@ class LangChainService:
         
         for i, skill in enumerate(missing_skills[:5]):
             # Retrieve relevant courses
-            docs = self.course_vectorstore.similarity_search(skill, k=2)
-            context = "\n".join([f"- {d.metadata['title']}: {d.metadata['url']}" for d in docs])
+            docs = []
+            if self.course_vectorstore is not None:
+                try:
+                    docs = self.course_vectorstore.similarity_search(skill, k=2)
+                except Exception:
+                    docs = []
+
+            if docs:
+                context = "\n".join([f"- {d.metadata['title']}: {d.metadata['url']}" for d in docs])
+                first_title = docs[0].metadata["title"]
+                first_url = docs[0].metadata["url"]
+            else:
+                fallback = self._fallback_course_docs(skill)
+                context = "\n".join([f"- {item['title']}: {item['url']}" for item in fallback])
+                first_title = fallback[0]["title"] if fallback else f"{skill} Specialist"
+                first_url = fallback[0]["url"] if fallback else "https://coursera.org"
             
             prompt = PromptTemplate(
                 template=prompt_template,
@@ -82,8 +121,8 @@ class LangChainService:
                 roadmap.append({
                     "step": i + 1,
                     "title": f"Mastering {skill}",
-                    "course_name": docs[0].metadata['title'] if docs else f"{skill} Specialist",
-                    "url": docs[0].metadata['url'] if docs else "https://coursera.org",
+                    "course_name": first_title,
+                    "url": first_url,
                     "reasoning": f"Critical gap identified for JD requirements."
                 })
                 
