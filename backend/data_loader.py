@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+import tempfile
 from typing import Any
 
 from huggingface_hub import hf_hub_download, snapshot_download
@@ -12,10 +13,11 @@ class DataLoader:
     def __init__(self) -> None:
         self.project_root = Path(__file__).resolve().parents[1]
         self.local_data_dir = self.project_root / "data"
+        default_cache_dir = Path(tempfile.gettempdir()) / "ai_onboarding" / "data"
         self.cache_dir = Path(
             os.getenv("CACHE_DIR")
             or os.getenv("DATA_CACHE_DIR")
-            or "/tmp/ai_onboarding/data"
+            or str(default_cache_dir)
         )
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.data_source = os.getenv("DATA_SOURCE", "local").strip().lower()

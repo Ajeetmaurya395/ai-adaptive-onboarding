@@ -31,9 +31,9 @@ def test_bridge():
     required_keys = ["summary", "skills", "roadmap", "raw_text"]
     for key in required_keys:
         if key in result:
-            print(f"✅ Key '{key}' found.")
+            print(f"[OK] Key '{key}' found.")
         else:
-            print(f"❌ Key '{key}' MISSING.")
+            print(f"[MISSING] Key '{key}' not found.")
 
 if __name__ == "__main__":
     test_bridge()

@@ -159,7 +159,7 @@ class LLMService:
                 return self._parse_json_response(content)
             return content
         
-        print("⚠️ Using adaptive mock response (API unavailable or failed)")
+        print("[WARN] Using adaptive mock response (API unavailable or failed)")
         p_type = ("resume" if "resume" in user_prompt.lower() or "candidate" in user_prompt.lower() else 
                   "jd" if "job" in user_prompt.lower() or "requirements" in user_prompt.lower() else
                   "roadmap" if "roadmap" in user_prompt.lower() else "trace")
@@ -183,7 +183,7 @@ class LLMService:
         if result and "choices" in result:
             return result["choices"][0]["message"]["content"]
 
-        print("⚠️ Using adaptive chat fallback (API unavailable or failed)")
+        print("[WARN] Using adaptive chat fallback (API unavailable or failed)")
         return self._generate_chat_mock(chat_messages)
 
 llm = LLMService()

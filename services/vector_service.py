@@ -164,7 +164,7 @@ class VectorService:
             self.onet_occupations = None
             self.course_catalog = None
             self.chroma_error = str(exc)
-            print(f"⚠️ ChromaDB unavailable, using fallback: {exc}")
+            print(f"[WARN] ChromaDB unavailable, using fallback: {exc}")
 
     def _get_embedding_model(self) -> SentenceTransformer:
         if self.embedding_model is None:
@@ -233,7 +233,7 @@ class VectorService:
             return list(db[collection_name].aggregate(pipeline))
         except Exception as exc:
             self.atlas_error = str(exc)
-            print(f"⚠️ Atlas Vector Search unavailable, using fallback: {exc}")
+            print(f"[WARN] Atlas Vector Search unavailable, using fallback: {exc}")
             return []
 
     def _format_distance(self, score: float) -> float:
@@ -318,7 +318,7 @@ class VectorService:
                     })
             return output
         except Exception as exc:
-            print(f"⚠️ Chroma skill lookup failed, using fallback: {exc}")
+            print(f"[WARN] Chroma skill lookup failed, using fallback: {exc}")
             return []
 
     def _chroma_occupation_result(self, role_title: str) -> Optional[Dict]:
@@ -334,7 +334,7 @@ class VectorService:
                     "source": "chromadb",
                 }
         except Exception as exc:
-            print(f"⚠️ Chroma occupation lookup failed, using fallback: {exc}")
+            print(f"[WARN] Chroma occupation lookup failed, using fallback: {exc}")
         return None
 
     def _chroma_course_results(self, skill: str, n_results: int) -> List[Dict]:
@@ -354,7 +354,7 @@ class VectorService:
                     })
             return output
         except Exception as exc:
-            print(f"⚠️ Chroma course lookup failed, using fallback: {exc}")
+            print(f"[WARN] Chroma course lookup failed, using fallback: {exc}")
             return []
 
     def get_nearest_skills(self, skill_text: str, n_results: int = 5) -> List[Dict]:
