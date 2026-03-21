@@ -6,7 +6,7 @@ services:
     region: oregon
     autoDeployTrigger: commit
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn backend.api:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn backend.api:app --host 0.0.0.0 --port 10000
     healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
@@ -51,7 +51,7 @@ services:
     region: oregon
     autoDeployTrigger: commit
     buildCommand: pip install -r requirements.txt
-    startCommand: streamlit run app/ui.py --server.port $PORT --server.address 0.0.0.0
+    startCommand: streamlit run app/ui.py --server.port 10000 --server.address 0.0.0.0
     healthCheckPath: /_stcore/health
     envVars:
       - key: PYTHON_VERSION
