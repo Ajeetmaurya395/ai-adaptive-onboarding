@@ -1,187 +1,210 @@
 """
-Dedicated skill extraction module with normalization and validation
+Dataset-grounded skill extraction with optional LLM refinement.
 """
-import re
 import json
-from typing import List, Dict, Optional
+import re
+from pathlib import Path
+from typing import Dict, List, Optional
+
 from services.llm_service import llm
 
 
 class SkillExtractor:
-    """Extract and normalize skills from text using LLM + rule-based fallbacks"""
-    
-    # Common skill synonyms for normalization
+    """Extract and normalize skills using local datasets first, then LLM refinement."""
+
     SKILL_SYNONYMS = {
-        "python": ["py", "python3", "python programming"],
-        "javascript": ["js", "ecmascript", "node.js", "nodejs"],
-        "sql": ["mysql", "postgresql", "database querying", "sql programming"],
-        "aws": ["amazon web services", "ec2", "s3", "lambda", "cloudformation"],
-        "docker": ["containerization", "docker engine", "docker compose"],
-        "kubernetes": ["k8s", "kubernetes orchestration", "k8s cluster"],
-        "react": ["react.js", "reactjs", "react framework"],
-        "machine learning": ["ml", "machine-learning", "statistical modeling"],
-        "communication": ["verbal communication", "written communication", "presentation skills"],
-        "leadership": ["team leadership", "people management", "mentoring"],
+        "Python": ["py", "python3", "python programming"],
+        "JavaScript": ["js", "ecmascript", "node.js", "nodejs"],
+        "SQL": ["mysql", "postgresql", "database querying", "structured query language"],
+        "AWS": ["amazon web services", "aws ec2", "aws s3", "aws lambda"],
+        "Docker": ["containerization", "docker engine", "docker compose"],
+        "Kubernetes": ["k8s", "kubernetes orchestration", "k8s cluster"],
+        "React": ["react.js", "reactjs", "react framework"],
+        "Machine Learning": ["ml", "machine-learning", "statistical modeling"],
+        "Communication": ["verbal communication", "written communication", "presentation skills"],
+        "Leadership": ["team leadership", "people management", "mentoring"],
+        "CI/CD": ["github actions", "gitlab ci", "continuous integration", "continuous delivery", "continuous deployment", "ci cd", "cicd"],
+        "CloudFormation": ["cloud formation", "aws cloudformation"],
+        "Microservices": ["microservices architecture", "microservice architecture"],
     }
-    
-    # Skills to exclude (too generic)
+
     EXCLUDE_PATTERNS = [
-        r'\b(ms\s*word|excel|powerpoint|office)\b',
-        r'\b(internet|email|web\s*browsing)\b',
-        r'\b(team\s*player|hard\s*working|fast\s*learner)\b',
+        r"\b(ms\s*word|excel|powerpoint|office)\b",
+        r"\b(internet|email|web\s*browsing)\b",
+        r"\b(team\s*player|hard\s*working|fast\s*learner)\b",
     ]
-    
+
     def __init__(self, taxonomy_path: Optional[str] = None):
-        """Initialize with optional skill taxonomy for validation"""
-        self.taxonomy = self._load_taxonomy(taxonomy_path) if taxonomy_path else {}
-    
-    def _load_taxonomy(self, path: str) -> Dict:
-        """Load skill taxonomy JSON for validation"""
+        self.project_root = Path(__file__).resolve().parents[1]
+        resolved_taxonomy = Path(taxonomy_path) if taxonomy_path else self.project_root / "data" / "skill_taxonomy.json"
+        self.taxonomy = self._load_json(resolved_taxonomy)
+        self.skill_lookup = self._load_json(self.project_root / "data" / "skill_lookup.json")
+        self.course_catalog = self._load_json(self.project_root / "data" / "course_catalog.json")
+        self.onet_tools = self._load_json(self.project_root / "data" / "onet_tech_skills.json")
+        self.known_skills = self._build_known_skills()
+        self._sorted_skill_keys = sorted(self.known_skills.keys(), key=len, reverse=True)
+
+    def _load_json(self, path: Path) -> Dict:
         try:
-            with open(path, 'r') as f:
-                return json.load(f)
-        except FileNotFoundError:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
             return {}
-    
-    def _normalize_skill(self, skill: str) -> str:
-        """Normalize skill name to canonical form"""
-        skill_lower = skill.lower().strip()
-        
-        # Check synonyms
+
+    def _normalize_key(self, text: str) -> str:
+        lowered = (text or "").lower().strip()
+        lowered = lowered.replace("&", " and ")
+        lowered = lowered.replace("/", " ")
+        lowered = re.sub(r"[^a-z0-9\+\#\.\-\s]", " ", lowered)
+        lowered = re.sub(r"\s+", " ", lowered).strip()
+        return lowered
+
+    def _canonical_title(self, skill: str) -> str:
+        normalized = self._normalize_key(skill)
         for canonical, variants in self.SKILL_SYNONYMS.items():
-            if skill_lower == canonical or skill_lower in variants:
-                return canonical.title()
-        
-        # Basic cleanup
-        normalized = re.sub(r'[^a-zA-Z0-9\s\.\+\-#]', '', skill_lower)
-        normalized = re.sub(r'\s+', ' ', normalized).strip()
-        
-        return normalized.title() if normalized else skill
-    
+            if normalized == self._normalize_key(canonical):
+                return canonical
+            if normalized in {self._normalize_key(variant) for variant in variants}:
+                return canonical
+        return (skill or "").strip()
+
+    def _build_known_skills(self) -> Dict[str, str]:
+        known: Dict[str, str] = {}
+
+        def register(raw_skill: str, canonical: Optional[str] = None) -> None:
+            canonical_value = (canonical or raw_skill or "").strip()
+            normalized = self._normalize_key(raw_skill)
+            if not normalized or len(normalized) < 2:
+                return
+            known[normalized] = canonical_value
+
+        for category_skills in self.taxonomy.get("categories", {}).values():
+            for skill in category_skills:
+                register(skill, self._canonical_title(skill))
+
+        for key, value in self.skill_lookup.items():
+            canonical = value.get("canonical", key)
+            register(key, canonical)
+            register(canonical, canonical)
+
+        for course in self.course_catalog.get("courses", []):
+            skill = course.get("skill")
+            if skill:
+                canonical = self._canonical_title(skill)
+                register(skill, canonical)
+                register(canonical, canonical)
+
+        for tool_list in self.onet_tools.values():
+            for tool in tool_list:
+                tool_name = tool.get("tool")
+                if tool_name:
+                    register(tool_name, self._canonical_title(tool_name))
+
+        for canonical, variants in self.SKILL_SYNONYMS.items():
+            register(canonical, canonical)
+            for variant in variants:
+                register(variant, canonical)
+
+        return known
+
     def _is_valid_skill(self, skill: str) -> bool:
-        """Filter out invalid or too-generic skills"""
-        skill_lower = skill.lower()
-        
-        # Too short or too long
-        if len(skill_lower) < 2 or len(skill_lower) > 50:
+        normalized = self._normalize_key(skill)
+        if len(normalized) < 2 or len(normalized) > 80:
             return False
-        
-        # Check exclusion patterns
         for pattern in self.EXCLUDE_PATTERNS:
-            if re.search(pattern, skill_lower, re.IGNORECASE):
+            if re.search(pattern, normalized, re.IGNORECASE):
                 return False
-        
-        # Check against taxonomy if available
-        if self.taxonomy:
-            categories = self.taxonomy.get("categories", {})
-            all_valid = [s.lower() for cat in categories.values() for s in cat]
-            if skill_lower not in all_valid and skill_lower not in [syn for variants in self.SKILL_SYNONYMS.values() for syn in variants]:
-                # Allow new skills but flag for review
-                pass
-        
         return True
-    
+
+    def _dedupe_preserve_order(self, skills: List[str]) -> List[str]:
+        seen = set()
+        ordered = []
+        for skill in skills:
+            canonical = self._canonical_title(skill)
+            key = canonical.lower()
+            if key in seen or not self._is_valid_skill(canonical):
+                continue
+            seen.add(key)
+            ordered.append(canonical)
+        return ordered
+
+    def _find_dataset_skills(self, text: str) -> List[str]:
+        normalized_text = f" {self._normalize_key(text)} "
+        found = []
+        for phrase in self._sorted_skill_keys:
+            if len(found) >= 25:
+                break
+            if f" {phrase} " not in normalized_text:
+                continue
+            canonical = self.known_skills.get(phrase, phrase)
+            found.append(canonical)
+        return self._dedupe_preserve_order(found)
+
+    def _infer_experience_years(self, text: str) -> int:
+        matches = re.findall(r"(\d+)\+?\s+years?", text, flags=re.IGNORECASE)
+        if not matches:
+            return 0
+        return max(int(value) for value in matches)
+
     def extract_from_text(self, text: str, context: str = "resume") -> Dict:
-        """
-        Extract skills using LLM with rule-based post-processing
-        
-        Args:
-            text: Raw text to analyze
-            context: "resume" or "jd" for context-aware extraction
-            
-        Returns:
-            Dict with extracted skills and metadata
-        """
         if not text or len(text.strip()) < 20:
-            return {"skills": [], "confidence": 0.0, "source": "empty_input"}
-        
-        # Truncate to avoid token limits
+            return {"skills": [], "confidence": 0.0, "source": "empty_input", "count": 0}
+
+        dataset_skills = self._find_dataset_skills(text)
         truncated = text[:4000]
-        
-        # Choose prompt based on context
+
         if context == "resume":
-            system_prompt = """You are a precise skill extraction engine. 
-            Output ONLY valid JSON with key "skills" containing a list of skill strings.
-            Focus on technical skills, tools, frameworks, and professional competencies.
-            Exclude generic terms like "communication" unless clearly emphasized."""
-        else:  # jd
-            system_prompt = """You are a job requirements analyzer.
-            Output ONLY valid JSON with key "skills" containing required skill strings.
-            Include must-have and nice-to-have skills. Be specific about tools/technologies."""
-        
-        user_prompt = f"Extract skills from this {context}:\n\n{truncated}"
-        
-        # Call LLM
+            system_prompt = (
+                "You extract professional skills from resumes. "
+                "Return ONLY valid JSON with a 'skills' array. "
+                "Prefer grounded technical, domain, and leadership skills."
+            )
+        else:
+            system_prompt = (
+                "You extract job requirement skills from job descriptions. "
+                "Return ONLY valid JSON with a 'skills' array. "
+                "Prefer explicit requirements and strongly implied stack skills."
+            )
+
+        candidates_block = ", ".join(dataset_skills[:40]) if dataset_skills else "None"
+        user_prompt = (
+            f"Analyze this {context} text.\n"
+            f"Grounded candidate skills from local datasets: {candidates_block}\n\n"
+            f"{truncated}"
+        )
+
         raw_result = llm.generate(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
-            response_type="json"
+            response_type="json",
         )
-        
-        # Parse and validate results
-        skills = raw_result.get("skills", []) if isinstance(raw_result, dict) else []
-        
-        # Post-process: normalize and filter
-        processed = []
-        for skill in skills:
-            if isinstance(skill, str) and self._is_valid_skill(skill):
-                normalized = self._normalize_skill(skill)
-                if normalized not in processed:  # Deduplicate
-                    processed.append(normalized)
-        
-        # Fallback: rule-based extraction if LLM fails
-        if not processed:
-            processed = self._rule_based_extract(text, context)
-        
+
+        llm_skills = raw_result.get("skills", []) if isinstance(raw_result, dict) else []
+        processed_llm = self._dedupe_preserve_order([skill for skill in llm_skills if isinstance(skill, str)])
+        combined = self._dedupe_preserve_order(dataset_skills + processed_llm)
+
+        if not combined:
+            combined = dataset_skills
+
+        if processed_llm and dataset_skills:
+            source = "llm+dataset"
+            confidence = 0.94
+        elif processed_llm:
+            source = "llm"
+            confidence = 0.88
+        elif dataset_skills:
+            source = "dataset"
+            confidence = 0.72
+        else:
+            source = "fallback"
+            confidence = 0.3
+
         return {
-            "skills": processed,
-            "confidence": 0.9 if processed else 0.3,
-            "source": "llm" if processed else "fallback",
-            "count": len(processed)
+            "skills": combined[:20],
+            "confidence": confidence,
+            "source": source,
+            "count": len(combined[:20]),
+            "experience_years": self._infer_experience_years(text) if context == "resume" else None,
         }
-    
-    def _rule_based_extract(self, text: str, context: str) -> List[str]:
-        """Fallback regex-based skill extraction"""
-        skills = []
-        text_lower = text.lower()
-        
-        # Extract common tech skills via keywords
-        tech_keywords = [
-            "python", "javascript", "java", "sql", "aws", "azure", "gcp",
-            "docker", "kubernetes", "react", "angular", "vue", "node",
-            "django", "flask", "tensorflow", "pytorch", "pandas", "numpy",
-            "git", "linux", "bash", "rest", "graphql", "mongodb", "redis"
-        ]
-        
-        for keyword in tech_keywords:
-            if keyword in text_lower:
-                normalized = self._normalize_skill(keyword)
-                if normalized not in skills:
-                    skills.append(normalized)
-        
-        # Extract experience patterns: "X years of Y"
-        exp_pattern = r'(\d+\+?\s*years?\s*(?:of\s*)?experience\s*(?:in\s*)?)([a-zA-Z\s\.\+]+)'
-        for match in re.finditer(exp_pattern, text, re.IGNORECASE):
-            skill_candidate = match.group(2).strip()
-            if self._is_valid_skill(skill_candidate):
-                normalized = self._normalize_skill(skill_candidate)
-                if normalized not in skills:
-                    skills.append(normalized)
-        
-        return skills[:15]  # Limit fallback results
-    
-    def batch_extract(self, documents: List[Dict]) -> List[Dict]:
-        """Extract skills from multiple documents efficiently"""
-        results = []
-        for doc in documents:
-            result = self.extract_from_text(
-                text=doc.get("text", ""),
-                context=doc.get("type", "resume")
-            )
-            result["doc_id"] = doc.get("id")
-            results.append(result)
-        return results
 
 
-# Singleton instance
 skill_extractor = SkillExtractor(taxonomy_path="data/skill_taxonomy.json")

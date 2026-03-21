@@ -98,6 +98,7 @@ class GapAnalysisResult(BaseModel):
     missing_skills: List[MissingSkill] = Field(default_factory=list)
     extra_skills: List[Dict] = Field(default_factory=list)
     total_required: int
+    category_scores: Dict[str, float] = Field(default_factory=dict)
     analysis_timestamp: datetime = Field(default_factory=datetime.now)
     
     @property

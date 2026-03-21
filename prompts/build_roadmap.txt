@@ -7,12 +7,12 @@ Instructions:
 
 Output Format (STRICT JSON array - no markdown):
 [
-  {
+  {{
     "skill": "SkillName",
     "resource": "Course/Resource Name",
     "duration": "X weeks",
     "priority": "High"
-  }
+  }}
 ]
 
 Missing Skills: {missing_skills}

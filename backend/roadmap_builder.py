@@ -1,66 +1,28 @@
-from services.llm_service import llm
+from backend.roadmap_graph import run_roadmap_graph
 import os
-
-def load_prompt(filename):
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    prompt_path = os.path.join(base_dir, "prompts", filename)
-    with open(prompt_path, "r", encoding="utf-8") as f:
-        return f.read()
+import json
 
 def generate_roadmap(missing_skills, role_context="Target Role"):
-    """Generate personalized learning roadmap for missing skills"""
+    """Generate personalized learning roadmap for missing skills using LangGraph workflow."""
     if not missing_skills:
         return []
     
-    # Load course catalog for resource suggestions
-    catalog_path = os.path.join(os.path.dirname(__file__), "..", "data", "course_catalog.json")
-    courses = {}
+    # Use LangGraph for orchestrated roadmap generation
+    try:
+        roadmap_items = run_roadmap_graph(missing_skills, role_context)
+        if roadmap_items:
+            return roadmap_items
+    except Exception as e:
+        print(f"LangGraph roadmap generation failed: {e}")
     
-    if os.path.exists(catalog_path):
-        import json
-        with open(catalog_path, "r") as f:
-            data = json.load(f)
-            for course in data.get("courses", []):
-                courses[course["skill"].lower()] = course
-    
-    # Build context for prompt
-    skill_list = ", ".join(missing_skills[:10])  # Limit for context window
-    
-    prompt_template = load_prompt("build_roadmap.txt")
-    prompt = prompt_template.format(
-        missing_skills=skill_list,
-        role_context=role_context
-    )
-    
-    roadmap = llm.generate(
-        system_prompt="You are a precise JSON output engine. Return ONLY a valid JSON array.",
-        user_prompt=prompt,
-        response_type="json"
-    )
-    
-    # Validate and enhance results
-    if isinstance(roadmap, list) and len(roadmap) > 0:
-        # Add fallback resources from catalog if missing
-        for item in roadmap:
-            skill = item.get("skill", "").lower()
-            if not item.get("resource") and skill in courses:
-                item["resource"] = courses[skill].get("title", "Online Course")
-            if not item.get("duration"):
-                item["duration"] = "4 weeks"
-            if not item.get("priority"):
-                item["priority"] = "High"
-        return roadmap
-    
-    # Fallback: generate basic roadmap from catalog
-    fallback = []
-    for skill in missing_skills[:5]:  # Limit to 5 for fallback
-        skill_lower = skill.lower()
-        resource = courses.get(skill_lower, {}).get("title", f"{skill} Fundamentals Course")
-        fallback.append({
-            "skill": skill,
-            "resource": resource,
-            "duration": "4 weeks",
-            "priority": "High" if len(missing_skills) <= 3 else "Medium"
-        })
-    
-    return fallback
+    # Fallback robust steps
+    return [
+        {
+            "step": i + 1,
+            "title": f"Mastering {skill}",
+            "course_name": f"{skill} Specialist Certification",
+            "url": "https://coursera.org",
+            "reasoning": f"Identified as a critical gap for the {role_context} role."
+        }
+        for i, skill in enumerate(missing_skills[:5])
+    ]

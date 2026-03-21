@@ -6,11 +6,11 @@ Instructions:
 3. Write a brief professional summary
 
 Output Format (STRICT JSON - no markdown, no explanations):
-{
+{{
   "skills": ["Skill1", "Skill2", "Skill3"],
   "experience_years": 3,
   "summary": "Brief professional summary here"
-}
+}}
 
 Resume Text:
 {text}
